@@ -9,9 +9,17 @@ The code has been originally developed for analysing the Dutch offshore wind atl
 The code is tested in an Anaconda environment with Python 3.9.1, which can be created using the lower command:
 
 ```
-conda create --name <env> --file requirements.txt python=3.9.1
+conda create --name [env_name] --file requirements.txt python=3.9.1
+```
+replacing [env_name] by a name of your choice. Download the DOWA files of the desired location. Point with the `data_dir` variable in **dowa.py** to the download directory. In `main` of **wind_profile_clustering.py** change the grid point coordinates that are passed to the `read_data` function to those of the downloaded location. Activate the new environment:
+
+```commandline
+conda activate [env_name]
 ```
 
-Download the DOWA files of the desired location. Point with the `data_dir` variable in **dowa.py** to the download directory. In `main` of **wind_profile_clustering.py** change the grid point coordinates that are passed to the `read_data` function to those of the donwnloaded location and run the script.
+Finally, run the script to perform the clustering:
 
+```
+python wind_profile_clustering.py
+```
 
