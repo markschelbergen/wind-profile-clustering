@@ -5,8 +5,7 @@ from pathlib import Path
 
 path = Path(__file__).parent
 
-# data_dir = '/media/mark/LaCie/DOWA/'
-data_dir = "/home/mark/WindData/DOWA/"
+data_dir = "/home/mark/WindData/DOWA/"  # '/media/mark/LaCie/DOWA/'
 
 
 with open(path / 'dowa_grid.pickle', 'rb') as f:
@@ -90,6 +89,8 @@ def read_data(grid_points={'coords': (52.85, 3.44)}):
     elif 'i_lat' in grid_points and 'i_lon' in grid_points:
         k, l = grid_points['i_lat'], grid_points['i_lon']
         vw_east, vw_north, dts, alts = read_netcdf(k, l)
+    elif 'iy' in grid_points and 'ix' in grid_points:
+        vw_east, vw_north, dts, alts = read_netcdf(grid_points['iy']-1, grid_points['ix']-1)
     elif 'ids' in grid_points:  # Mulitple locations.
         i_lats, i_lons = grid_points['ids'][0], grid_points['ids'][1]
         n_locs = len(i_lats)
@@ -122,4 +123,4 @@ def read_data(grid_points={'coords': (52.85, 3.44)}):
 
 
 if __name__ == '__main__':
-    read_data({'i_lat': 110, 'i_lon': 55})
+    read_data({'iy': 111, 'ix': 56})

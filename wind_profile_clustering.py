@@ -326,10 +326,10 @@ def predict_cluster(training_data, n_clusters, predict_fun, cluster_mapping):
 
 
 if __name__ == '__main__':
-    from read_data.fgw_lidar import read_data
-    data = read_data()
-    # from read_data.dowa import read_data
-    # data = read_data({'i_lat': 110, 'i_lon': 55})
+    # from read_data.fgw_lidar import read_data
+    # data = read_data()
+    from read_data.dowa import read_data
+    data = read_data({'iy': 111, 'ix': 56})
     from preprocess_data import preprocess_data
     processed_data = preprocess_data(data)
     n_clusters = 8
