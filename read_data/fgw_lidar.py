@@ -48,9 +48,9 @@ def read_data(read_raw_data=False):
             else:
                 df_complete = df_complete.append(df_downsampled)
 
-        df_complete.to_csv(path / "aggregated_downsampled_data.csv")
+        df_complete.to_csv(path / "downsampled_fgw_lidar_data.csv")
     else:
-        df_complete = pd.read_csv(path / "aggregated_downsampled_data.csv", parse_dates=[0], index_col='Timestamp')
+        df_complete = pd.read_csv(path / "downsampled_fgw_lidar_data.csv", parse_dates=[0], index_col='Timestamp')
 
     dts = df_complete.index.values
     res = {
