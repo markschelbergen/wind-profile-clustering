@@ -83,6 +83,12 @@ def read_netcdf(i_lat, i_lon):
 
 
 def read_data(grid_points={'coords': (52.85, 3.44)}):
+    if grid_points.get('name', None) == 'mmij':
+        iy, ix = 111, 56
+        vw_east, vw_north, dts, alts = read_netcdf(iy-1, ix-1)
+    elif grid_points.get('name', None) == 'mmc':
+        iy, ix = 74, 99
+        vw_east, vw_north, dts, alts = read_netcdf(iy-1, ix-1)
     if 'coords' in grid_points:
         k, l = find_closest_dowa_grid_point(*grid_points['coords'])
         vw_east, vw_north, dts, alts = read_netcdf(k, l)

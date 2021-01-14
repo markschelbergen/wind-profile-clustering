@@ -105,8 +105,7 @@ def plot_frequency_projection(data_pc):
 
     n_bins = 120
     vmax = 1200
-    h, _, _, im = plt.hist2d(data_pc[:, 0], data_pc[:, 1], bins=n_bins, cmap=cmap, vmin=1,
-                             vmax=vmax, norm=LogNorm())
+    h, _, _, im = plt.hist2d(data_pc[:, 0], data_pc[:, 1], bins=n_bins, cmap=cmap, norm=LogNorm(vmin=1, vmax=vmax))
     h_max = np.amax(h)
     print("Max occurences in hist2d bin:", str(h_max))
     if vmax is not None and h_max > vmax:
@@ -166,7 +165,7 @@ def analyse_pc(wind_data):
 
 if __name__ == '__main__':
     from read_data.dowa import read_data
-    wind_data = read_data({'i_lat': 110, 'i_lon': 55})
+    wind_data = read_data({'name': 'mmij'})
     from preprocess_data import preprocess_data
     wind_data = preprocess_data(wind_data)
     analyse_pc(wind_data)

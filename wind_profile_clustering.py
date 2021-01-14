@@ -3,6 +3,7 @@ from sklearn.decomposition import PCA
 from sklearn.pipeline import make_pipeline
 import numpy as np
 import matplotlib.pyplot as plt
+from copy import copy
 
 xlim_pc12 = [-1.1, 1.1]
 ylim_pc12 = [-1.1, 1.1]
@@ -159,7 +160,7 @@ def visualise_patterns(n_clusters, wind_data, sample_labels, frequency_clusters)
     ax_bars[0].set_xticklabels(range(1, n_clusters+1))
     ax_bars[-1].set_xlabel('Cluster label')
 
-    viridis = plt.get_cmap('viridis')
+    viridis = copy(plt.get_cmap('viridis'))
     viridis.set_bad(color='white')
 
     # Study yearly (grouped) variation.
@@ -202,7 +203,6 @@ def visualise_patterns(n_clusters, wind_data, sample_labels, frequency_clusters)
         for i_c in range(n_clusters):
             freq2d_month_bin[i_b, i_c] = np.sum(lbls_m == i_c)/n_samples * 100.
             freq2d_month_bin[i_b, i_c] = freq2d_month_bin[i_b, i_c] / frequency_clusters[i_c] * 100.
-    freq2d_month_bin = np.ma.masked_where(freq2d_month_bin == 0., freq2d_month_bin)
     plot_bars(freq2d_month_bin, month_bin_lbls, ax=ax_bars[1], legend_title="Month bins")
     ax_bars[1].set_ylabel("Within-cluster\nfrequency [%]")
 
@@ -223,7 +223,6 @@ def visualise_patterns(n_clusters, wind_data, sample_labels, frequency_clusters)
         for i_c in range(n_clusters):
             freq2d_hour_bin[i_b, i_c] = np.sum(lbls_hr == i_c)/n_samples * 100.
             freq2d_hour_bin[i_b, i_c] = freq2d_hour_bin[i_b, i_c] / frequency_clusters[i_c] * 100.
-    freq2d_hour_bin = np.ma.masked_where(freq2d_hour_bin == 0., freq2d_hour_bin)
     plot_bars(freq2d_hour_bin, hour_bin_lbls, ax=ax_bars[2], legend_title="UTC hour bins")
     ax_bars[2].set_ylabel("Within-cluster\nfrequency [%]")
 
@@ -244,7 +243,6 @@ def visualise_patterns(n_clusters, wind_data, sample_labels, frequency_clusters)
     v_bin_labels[0] = "$v_{100m}$ <= " + "{:.1f}".format(v_bin_limits[1])
     v_bin_labels[-1] = "$v_{100m}$ > " + "{:.1f}".format(v_bin_limits[-2])
 
-    freq2d_vbin = np.ma.masked_where(freq2d_vbin == 0., freq2d_vbin)
     plot_bars(freq2d_vbin, v_bin_labels, ax=ax_bars[3], legend_title="Wind speed 100 m bins [m s$^{-1}$]")
     ax_bars[3].set_ylabel("Within-cluster\nfrequency [%]")
 
@@ -275,7 +273,6 @@ def visualise_patterns(n_clusters, wind_data, sample_labels, frequency_clusters)
     wind_dir_bin_lbls = wind_dir_bin_lbls[2:] + wind_dir_bin_lbls[:2]
     wind_dir_bin_lbls = wind_dir_bin_lbls[::-1]
 
-    freq2d_wind_dir_bin = np.ma.masked_where(freq2d_wind_dir_bin == 0., freq2d_wind_dir_bin)
     plot_bars(freq2d_wind_dir_bin, wind_dir_bin_lbls, ax=ax_bars[4], legend_title="Upwind direction 100 m bins")
     ax_bars[4].set_ylabel("Within-cluster\nfrequency [%]")
 
@@ -326,10 +323,10 @@ def predict_cluster(training_data, n_clusters, predict_fun, cluster_mapping):
 
 
 if __name__ == '__main__':
-    # from read_data.fgw_lidar import read_data
-    # data = read_data()
-    from read_data.dowa import read_data
-    data = read_data({'iy': 111, 'ix': 56})
+    from read_data.fgw_lidar import read_data
+    data = read_data()
+    # from read_data.dowa import read_data
+    # data = read_data({'name': 'mmij'})
     from preprocess_data import preprocess_data
     processed_data = preprocess_data(data)
     n_clusters = 8
