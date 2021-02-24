@@ -1,15 +1,20 @@
 from sklearn.decomposition import PCA
 from itertools import accumulate
 import numpy as np
+
+import matplotlib as mpl
+mpl.use('Pdf')
 import matplotlib.pyplot as plt
 from matplotlib.colors import ListedColormap, LogNorm
+
 
 xlim_pc12 = [-1.1, 1.1]
 ylim_pc12 = [-1.1, 1.1]
 x_lim_profiles = [-0.8, 1.25]
 
+result_dir = "../DOWA/results/"
 
-def plot_mean_and_pc_profiles(altitudes, var, get_profile):
+def plot_mean_and_pc_profiles(altitudes, var, get_profile, plot_info=""):
     plot_n_pcs = 2
     n_cols = 3
     n_rows = plot_n_pcs
@@ -89,9 +94,10 @@ def plot_mean_and_pc_profiles(altitudes, var, get_profile):
             ax[-1, i_col].set_xlabel("Coefficient of PC [-]")
         else:
             ax[-1, i_col].set_xlabel(x_label)
+    plt.savefig(result_dir + 'pc_mean_and_pc_profiles' + plot_info + '.pdf')
 
 
-def plot_frequency_projection(data_pc):
+def plot_frequency_projection(data_pc, plot_info=""):
     plt.figure(figsize=(5, 2.5))
     plt.subplots_adjust(top=0.975, bottom=0.178, left=0.15, right=0.94)
 
@@ -102,7 +108,6 @@ def plot_frequency_projection(data_pc):
     clrs_low_values[0, :] = 0.
     clrs_high_values = cmap_baseline(np.linspace(.5, 1., int(256*(1-frac))))
     cmap = ListedColormap(np.vstack((clrs_low_values, clrs_high_values)))
-
     n_bins = 120
     vmax = 1200
     h, _, _, im = plt.hist2d(data_pc[:, 0], data_pc[:, 1], bins=n_bins, cmap=cmap, norm=LogNorm(vmin=1, vmax=vmax))
@@ -119,12 +124,11 @@ def plot_frequency_projection(data_pc):
     plt.grid()
     plt.xlabel('PC1')
     plt.ylabel('PC2')
+    plt.savefig(result_dir + 'pc_frequency_projection' + plot_info + '.pdf')
 
-
-def analyse_pc(wind_data):
+def analyse_pc(wind_data, loc_info=""):
     altitudes = wind_data['altitude']
     normalized_data = wind_data['training_data']
-
     # Perform principal component analyis.
     n_features = normalized_data.shape[1]
     pca = PCA(n_components=n_features)
@@ -138,12 +142,12 @@ def analyse_pc(wind_data):
     var = pca.explained_variance_
 
     # Plot results.
-    plot_frequency_projection(data_pc)
+    plot_frequency_projection(data_pc, plot_info=loc_info)
     markers_pc1, markers_pc2 = [-var[0]**.5, var[0]**.5, 0, 0], [0, 0, -var[1]**.5, var[1]**.5]
     plt.plot(markers_pc1, markers_pc2, 's', mfc="white", alpha=1, ms=12, mec='k')
     for i, (pc1, pc2) in enumerate(zip(markers_pc1, markers_pc2)):
         plt.plot(pc1, pc2, marker='${}$'.format(i+1), alpha=1, ms=7, mec='k')
-
+    plt.savefig(result_dir + 'pc_frequency_projection' + loc_info + '_markers.pdf')
     def get_pc_profile(i_pc=-1, multiplier=1., plot_pc=False):
         # Determine profile data by transforming data in PC to original coordinate system.
         if i_pc == -1:
@@ -160,13 +164,16 @@ def analyse_pc(wind_data):
         prp = profile[len(altitudes):]
         return prl, prp
 
-    plot_mean_and_pc_profiles(altitudes, var, get_pc_profile)
+    plot_mean_and_pc_profiles(altitudes, var, get_pc_profile, plot_info=loc_info)
 
 
 if __name__ == '__main__':
+    #Read DOWA data
     from read_data.dowa import read_data
-    wind_data = read_data({'name': 'mmij'})
+    location = {'i_lat': 110, 'i_lon': 55}
+    loc_info = '_' + '_'.join(['_'.join([k,str(v)]) for k,v in location.items()])
+    wind_data = read_data(location)
     from preprocess_data import preprocess_data
     wind_data = preprocess_data(wind_data)
-    analyse_pc(wind_data)
-    plt.show()
+
+    analyse_pc(wind_data, loc_info=loc_info)

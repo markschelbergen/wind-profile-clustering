@@ -2,8 +2,13 @@ from sklearn.cluster import KMeans
 from sklearn.decomposition import PCA
 from sklearn.pipeline import make_pipeline
 import numpy as np
+
+import matplotlib as mpl
+mpl.use('Pdf')
 import matplotlib.pyplot as plt
 from copy import copy
+
+from principal_component_analysis import result_dir
 
 xlim_pc12 = [-1.1, 1.1]
 ylim_pc12 = [-1.1, 1.1]
@@ -61,7 +66,7 @@ def cluster_normalized_wind_profiles_pca(training_data, n_clusters, n_pcs=5, reo
     return res
 
 
-def plot_wind_profile_shapes(altitudes, wind_prl, wind_prp, wind_mag=None, n_rows=2):
+def plot_wind_profile_shapes(altitudes, wind_prl, wind_prp, wind_mag=None, n_rows=2, plot_info=""):
     n_profiles = len(wind_prl)
     x_label0 = r"$\tilde{v}$ [-]"
     x_label1 = r"$\tilde{v}_{\parallel}$ [-]"
@@ -116,7 +121,7 @@ def plot_wind_profile_shapes(altitudes, wind_prl, wind_prp, wind_mag=None, n_row
 
     ax[0, 0].legend(bbox_to_anchor=(-1.5+n_cols*.5, 1.05, 3.+wspace*(n_cols-1), 0.2), loc="lower left", mode="expand",
                     borderaxespad=0, ncol=4)
-
+    plt.savefig(result_dir + 'cluster_wind_profile_shapes' + plot_info + '.pdf')
 
 def plot_bars(array2d, bars_labels=None, ax=None, legend_title="", xticklabels=None):
     n_bars = array2d.shape[0]
@@ -148,7 +153,7 @@ def plot_bars(array2d, bars_labels=None, ax=None, legend_title="", xticklabels=N
         ax.set_xticklabels(xticklabels)
 
 
-def visualise_patterns(n_clusters, wind_data, sample_labels, frequency_clusters):
+def visualise_patterns(n_clusters, wind_data, sample_labels, frequency_clusters, plot_info=""):
     wind_speed_100m = wind_data['reference_vector_speed']
     n_samples = len(wind_speed_100m)
 
@@ -276,8 +281,10 @@ def visualise_patterns(n_clusters, wind_data, sample_labels, frequency_clusters)
     plot_bars(freq2d_wind_dir_bin, wind_dir_bin_lbls, ax=ax_bars[4], legend_title="Upwind direction 100 m bins")
     ax_bars[4].set_ylabel("Within-cluster\nfrequency [%]")
 
+    plt.savefig(result_dir + 'cluster_visualised_patterns' + plot_info + '.pdf')
 
-def projection_plot_of_clusters(training_data_reduced, labels, clusters_pc):
+
+def projection_plot_of_clusters(training_data_reduced, labels, clusters_pc, plot_info=""):
     plt.figure(figsize=(4.2, 2.5))
     plt.subplots_adjust(top=0.975, bottom=0.178, left=0.18, right=0.94)
     if len(labels) > 5e4:
@@ -305,6 +312,8 @@ def projection_plot_of_clusters(training_data_reduced, labels, clusters_pc):
 
     plt.xlabel('PC1')
     plt.ylabel('PC2')
+    plt.savefig(result_dir + 'cluster_projection_plot_of_clusters' + plot_info + '.pdf')
+
 
 
 def predict_cluster(training_data, n_clusters, predict_fun, cluster_mapping):
@@ -323,18 +332,21 @@ def predict_cluster(training_data, n_clusters, predict_fun, cluster_mapping):
 
 
 if __name__ == '__main__':
-    from read_data.fgw_lidar import read_data
-    data = read_data()
-    # from read_data.dowa import read_data
-    # data = read_data({'name': 'mmij'})
+    # from read_data.fgw_lidar import read_data
+    # data = read_data()
+    from read_data.dowa import read_data
+    location = {'iy': 111, 'ix': 56}
+    loc_info = '_' + '_'.join(['_'.join([k,str(v)]) for k,v in location.items()])
+    data = read_data(location)
+
     from preprocess_data import preprocess_data
     processed_data = preprocess_data(data)
     n_clusters = 8
     res = cluster_normalized_wind_profiles_pca(processed_data['training_data'], n_clusters)
     prl, prp = res['clusters_feature']['parallel'], res['clusters_feature']['perpendicular']
-    plot_wind_profile_shapes(processed_data['altitude'], prl, prp, (prl ** 2 + prp ** 2) ** .5)
-    visualise_patterns(n_clusters, processed_data, res['sample_labels'], res['frequency_clusters'])
-    projection_plot_of_clusters(res['training_data_pc'], res['sample_labels'], res['clusters_pc'])
+    plot_wind_profile_shapes(processed_data['altitude'], prl, prp, (prl ** 2 + prp ** 2) ** .5, plot_info=loc_info)
+    visualise_patterns(n_clusters, processed_data, res['sample_labels'], res['frequency_clusters'], plot_info=loc_info)
+    projection_plot_of_clusters(res['training_data_pc'], res['sample_labels'], res['clusters_pc'], plot_info=loc_info)
 
     processed_data_full = preprocess_data(data, remove_low_wind_samples=False)
     labels, frequency_clusters = predict_cluster(processed_data_full['training_data'], n_clusters,
@@ -346,5 +358,6 @@ if __name__ == '__main__':
     ax[1].set_title('Full dataset')
     plot_bars(frequency_clusters.reshape((1, -1)), ax=ax[1], xticklabels=range(1, n_clusters+1))
     for a in ax: a.set_ylabel('Cluster frequency [%]')
-    # visualise_patterns(n_clusters, processed_data_full, labels)
-    plt.show()
+    plt.savefig(result_dir + 'cluster_compare_filtered_and_full_data' + loc_info + '.pdf')
+    # visualise_patterns(n_clusters, processed_data_full, labels, plot_info=loc_info)
+
