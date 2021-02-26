@@ -1,7 +1,7 @@
 import numpy as np
 from copy import copy
 
-from read_data import get_wind_data
+from read_requested_data import get_wind_data
 
 ref_vector_height = 100.
 

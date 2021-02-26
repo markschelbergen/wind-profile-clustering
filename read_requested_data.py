@@ -7,7 +7,7 @@ from os.path import join as path_join
 
 from config import use_data, start_year, final_year, latitude , longitude, \
                    DOWA_data_dir, location, \
-                   era5_data_dir, model_level_file_name_format, surface_file_name_format, read_model_level_up_to, height_range
+                   era5_data_dir, model_level_file_name_format, surface_file_name_format, read_model_level_up_to, era5_grid_size, height_range
 
 from era5_ml_height_calc import compute_level_heights
 
@@ -110,9 +110,8 @@ def get_wind_data():
     lat = lats_dowa_grid[location['i_lat'], location['i_lon']]
     lon = lons_dowa_grid[location['i_lat'], location['i_lon']]
     # round to grid spacing in ERA5 data
-    grid_size = 0.25
-    latitude = round(lat/grid_size)*grid_size
-    longitude = round(lon/grid_size)*grid_size
+    latitude = round(lat/era5_grid_size)*era5_grid_size
+    longitude = round(lon/era5_grid_size)*era5_grid_size
 
     data_info = '_' + '_'.join(['_'.join([k,str(v)]) for k,v in location.items()])
 
@@ -135,7 +134,7 @@ def get_wind_data():
 
     elif use_data == 'ERA5':
         wind_data = get_wind_data_era5(height_range, lat=latitude, lon=longitude, start_year=start_year, final_year=final_year, max_level=read_model_level_up_to)
-        data_info += "_era5_{}_{}".format(start_year, final_year)
+        data_info += "_era5_{}_{}_grid_{}".format(start_year, final_year, era5_grid_size)
     else:
         raise ValueError("Wrong data type specified: {} - no option to read data is executed".format(use_data))
 

@@ -24,10 +24,14 @@ Attributes:
 use_data_opts = ['DOWA', 'LIDAR', 'ERA5']
 use_data = use_data_opts[2]
 
+
+# See plots interactively - don't save plots directly as pdf to result_dir
+plots_interactive = False
 result_dir = "../clustering_results/" + use_data + "/"
 
+
 start_year = 2010
-final_year = 2017
+final_year = 2010 #7
 
 # Single location processing
 latitude = 0
@@ -47,7 +51,7 @@ location = {'i_lat': 110, 'i_lon': 55}
 era5_data_dir = '/cephfs/user/s6lathim/ERA5Data-redownload/' 
 model_level_file_name_format = "{:d}_europe_{:d}_130_131_132_133_135.nc"  # 'ml_{:d}_{:02d}.netcdf'
 surface_file_name_format = "{:d}_europe_{:d}_152.nc" # 'sfc_{:d}_{:02d}.netcdf' 
-
+era5_grid_size = 1. #0.25
 # Processing settings
 read_model_level_up_to = 112
 height_range = [ 10.,  20.,  40.,  60.,  80., 100., 120., 140., 150., 160., 180.,

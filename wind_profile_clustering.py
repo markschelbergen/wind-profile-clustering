@@ -4,13 +4,15 @@ from sklearn.pipeline import make_pipeline
 import numpy as np
 
 import matplotlib as mpl
-mpl.use('Pdf')
+
+from config import plots_interactive, result_dir
+
+if not plots_interactive:
+    mpl.use('Pdf')
 import matplotlib.pyplot as plt
-from copy import copy
+from matplotlib.colors import ListedColormap, LogNorm
 
-from config import result_dir
-
-from read_data import get_wind_data
+from read_requested_data import get_wind_data
 
 xlim_pc12 = [-1.1, 1.1]
 ylim_pc12 = [-1.1, 1.1]
@@ -123,7 +125,7 @@ def plot_wind_profile_shapes(altitudes, wind_prl, wind_prp, wind_mag=None, n_row
 
     ax[0, 0].legend(bbox_to_anchor=(-1.5+n_cols*.5, 1.05, 3.+wspace*(n_cols-1), 0.2), loc="lower left", mode="expand",
                     borderaxespad=0, ncol=4)
-    plt.savefig(result_dir + 'cluster_wind_profile_shapes' + plot_info + '.pdf')
+    if not plots_interactive: plt.savefig(result_dir + 'cluster_wind_profile_shapes' + plot_info + '.pdf')
 
 def plot_bars(array2d, bars_labels=None, ax=None, legend_title="", xticklabels=None):
     n_bars = array2d.shape[0]
@@ -283,7 +285,7 @@ def visualise_patterns(n_clusters, wind_data, sample_labels, frequency_clusters,
     plot_bars(freq2d_wind_dir_bin, wind_dir_bin_lbls, ax=ax_bars[4], legend_title="Upwind direction 100 m bins")
     ax_bars[4].set_ylabel("Within-cluster\nfrequency [%]")
 
-    plt.savefig(result_dir + 'cluster_visualised_patterns' + plot_info + '.pdf')
+    if not plots_interactive: plt.savefig(result_dir + 'cluster_visualised_patterns' + plot_info + '.pdf')
 
 
 def projection_plot_of_clusters(training_data_reduced, labels, clusters_pc, plot_info=""):
@@ -314,7 +316,7 @@ def projection_plot_of_clusters(training_data_reduced, labels, clusters_pc, plot
 
     plt.xlabel('PC1')
     plt.ylabel('PC2')
-    plt.savefig(result_dir + 'cluster_projection_plot_of_clusters' + plot_info + '.pdf')
+    if not plots_interactive: plt.savefig(result_dir + 'cluster_projection_plot_of_clusters' + plot_info + '.pdf')
 
 
 
@@ -355,6 +357,6 @@ if __name__ == '__main__':
     ax[1].set_title('Full dataset')
     plot_bars(frequency_clusters.reshape((1, -1)), ax=ax[1], xticklabels=range(1, n_clusters+1))
     for a in ax: a.set_ylabel('Cluster frequency [%]')
-    plt.savefig(result_dir + 'cluster_compare_filtered_and_full_data' + loc_info + '.pdf')
+    if not plots_interactive: plt.savefig(result_dir + 'cluster_compare_filtered_and_full_data' + loc_info + '.pdf')
     # visualise_patterns(n_clusters, processed_data_full, labels, plot_info=loc_info)
-
+    if plots_interactive: plt.show() 

@@ -3,17 +3,19 @@ from itertools import accumulate
 import numpy as np
 
 import matplotlib as mpl
-mpl.use('Pdf')
+
+from config import plots_interactive, result_dir
+from read_requested_data import get_wind_data
+
+if not plots_interactive:
+    mpl.use('Pdf')
 import matplotlib.pyplot as plt
 from matplotlib.colors import ListedColormap, LogNorm
-
-from read_data import get_wind_data
 
 xlim_pc12 = [-1.1, 1.1]
 ylim_pc12 = [-1.1, 1.1]
 x_lim_profiles = [-0.8, 1.25]
 
-from config import result_dir
 
 def plot_mean_and_pc_profiles(altitudes, var, get_profile, plot_info=""):
     plot_n_pcs = 2
@@ -95,7 +97,7 @@ def plot_mean_and_pc_profiles(altitudes, var, get_profile, plot_info=""):
             ax[-1, i_col].set_xlabel("Coefficient of PC [-]")
         else:
             ax[-1, i_col].set_xlabel(x_label)
-    plt.savefig(result_dir + 'pc_mean_and_pc_profiles' + plot_info + '.pdf')
+    if not plots_interactive: plt.savefig(result_dir + 'pc_mean_and_pc_profiles' + plot_info + '.pdf')
 
 
 def plot_frequency_projection(data_pc, plot_info=""):
@@ -125,7 +127,7 @@ def plot_frequency_projection(data_pc, plot_info=""):
     plt.grid()
     plt.xlabel('PC1')
     plt.ylabel('PC2')
-    plt.savefig(result_dir + 'pc_frequency_projection' + plot_info + '.pdf')
+    if not plots_interactive: plt.savefig(result_dir + 'pc_frequency_projection' + plot_info + '.pdf')
 
 def analyse_pc(wind_data, loc_info=""):
     altitudes = wind_data['altitude']
@@ -148,7 +150,7 @@ def analyse_pc(wind_data, loc_info=""):
     plt.plot(markers_pc1, markers_pc2, 's', mfc="white", alpha=1, ms=12, mec='k')
     for i, (pc1, pc2) in enumerate(zip(markers_pc1, markers_pc2)):
         plt.plot(pc1, pc2, marker='${}$'.format(i+1), alpha=1, ms=7, mec='k')
-    plt.savefig(result_dir + 'pc_frequency_projection' + loc_info + '_markers.pdf')
+    if not plots_interactive: plt.savefig(result_dir + 'pc_frequency_projection' + loc_info + '_markers.pdf')
     def get_pc_profile(i_pc=-1, multiplier=1., plot_pc=False):
         # Determine profile data by transforming data in PC to original coordinate system.
         if i_pc == -1:
@@ -174,3 +176,4 @@ if __name__ == '__main__':
     wind_data = preprocess_data(wind_data)
 
     analyse_pc(wind_data, loc_info=data_info)
+    if plots_interactive: plt.show()
