@@ -39,7 +39,7 @@ longitude = 0
 # FIX: get dowa indices by lat/lon - for now: dowa loc indices used for both
 
 # --------------------------- DOWA
-
+# data contains years 2008 to 2017
 DOWA_data_dir = "/gpfs/share/home/s6lathim/AWE/DOWA/" 
 # "/home/mark/WindData/DOWA/"  # '/media/mark/LaCie/DOWA/'
 
