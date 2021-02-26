@@ -116,6 +116,8 @@ def get_wind_data():
     data_info = '_lat_{:2.2f}_lon_{:2.2f}'.format(latitude,longitude)
 
     if use_data == 'DOWA':
+        data_info = '_lat_{:2.2f}_lon_{:2.2f}'.format(lat,lon) # part of FIX 
+
         import os
         #HDF5 library has been updated (1.10.1) (netcdf uses HDF5 under the hood)
         #file system does not support the file locking that the HDF5 library uses.
