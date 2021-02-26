@@ -126,9 +126,24 @@ def get_wind_data():
         from read_data.dowa import read_data
         wind_data = read_data(location, DOWA_data_dir)
 
-        # FIX: start_year - final_year data only!
-        data_info += "_DOWA_{}_{}".format(2008,2017)  # .format(start_year, final_year)
+        # Use start_year to final_year data only
+        hours = wind_data['datetime']
+        start_date = np.datetime64('{}-01-01T00:00:00.000000000'.format(start_year))
+        end_date = np.datetime64('{}-01-01T00:00:00.000000000'.format(final_year+1))
 
+        start_idx = list(hours).index(start_date)
+        end_idx = list(hours).index(end_date)
+        data_range = range(start_idx, end_idx + 1)
+
+        for key in ['wind_speed_east', 'wind_speed_north', 'datetime']:
+            wind_data[key] = wind_data[key][data_range]
+        wind_data['n_samples'] = len(data_range)
+        wind_data['years'] = (start_year, final_year)
+
+        data_info += "_DOWA_{}_{}".format(start_year, final_year)
+
+        print(len(hours))
+        print(len(wind_data['wind_speed_east']), wind_data['n_samples'])
     elif use_data == 'LIDAR':
         from read_data.fgw_lidar import read_data
         wind_data = read_data()

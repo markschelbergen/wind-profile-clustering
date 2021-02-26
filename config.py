@@ -22,7 +22,7 @@ Attributes:
 
 # --------------------------- GENERAL
 use_data_opts = ['DOWA', 'LIDAR', 'ERA5']
-use_data = use_data_opts[2]
+use_data = use_data_opts[0]
 
 
 # See plots interactively - don't save plots directly as pdf to result_dir
@@ -31,7 +31,7 @@ result_dir = "../clustering_results/" + use_data + "/"
 
 
 start_year = 2010
-final_year = 2010
+final_year = 2017
 
 # Single location processing
 latitude = 0
