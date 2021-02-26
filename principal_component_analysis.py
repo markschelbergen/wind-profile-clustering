@@ -13,7 +13,7 @@ xlim_pc12 = [-1.1, 1.1]
 ylim_pc12 = [-1.1, 1.1]
 x_lim_profiles = [-0.8, 1.25]
 
-result_dir = "../DOWA/results/"
+from config import result_dir
 
 def plot_mean_and_pc_profiles(altitudes, var, get_profile, plot_info=""):
     plot_n_pcs = 2

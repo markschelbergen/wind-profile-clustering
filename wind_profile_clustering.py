@@ -8,7 +8,7 @@ mpl.use('Pdf')
 import matplotlib.pyplot as plt
 from copy import copy
 
-from principal_component_analysis import result_dir
+from config import result_dir
 
 from read_data import get_wind_data
 
