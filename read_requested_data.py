@@ -113,7 +113,7 @@ def get_wind_data():
     latitude = round(lat/era5_grid_size)*era5_grid_size
     longitude = round(lon/era5_grid_size)*era5_grid_size
 
-    data_info = '_' + '_'.join(['_'.join([k,str(v)]) for k,v in location.items()])
+    data_info = '_lat_{:2.2f}_lon_{:2.2f}'.format(latitude,longitude)
 
     if use_data == 'DOWA':
         import os

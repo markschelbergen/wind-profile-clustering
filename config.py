@@ -31,7 +31,7 @@ result_dir = "../clustering_results/" + use_data + "/"
 
 
 start_year = 2010
-final_year = 2010 #7
+final_year = 2010
 
 # Single location processing
 latitude = 0
