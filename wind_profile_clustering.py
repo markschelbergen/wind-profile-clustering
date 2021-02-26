@@ -338,16 +338,16 @@ def predict_cluster(training_data, n_clusters, predict_fun, cluster_mapping):
 if __name__ == '__main__':
     wind_data, data_info = get_wind_data()
     from preprocess_data import preprocess_data
-    processed_data = preprocess_data(data)
+    processed_data = preprocess_data(wind_data)
 
     n_clusters = 8
     res = cluster_normalized_wind_profiles_pca(processed_data['training_data'], n_clusters)
     prl, prp = res['clusters_feature']['parallel'], res['clusters_feature']['perpendicular']
-    plot_wind_profile_shapes(processed_data['altitude'], prl, prp, (prl ** 2 + prp ** 2) ** .5, plot_info=loc_info)
-    visualise_patterns(n_clusters, processed_data, res['sample_labels'], res['frequency_clusters'], plot_info=loc_info)
-    projection_plot_of_clusters(res['training_data_pc'], res['sample_labels'], res['clusters_pc'], plot_info=loc_info)
+    plot_wind_profile_shapes(processed_data['altitude'], prl, prp, (prl ** 2 + prp ** 2) ** .5, plot_info=data_info)
+    visualise_patterns(n_clusters, processed_data, res['sample_labels'], res['frequency_clusters'], plot_info=data_info)
+    projection_plot_of_clusters(res['training_data_pc'], res['sample_labels'], res['clusters_pc'], plot_info=data_info)
 
-    processed_data_full = preprocess_data(data, remove_low_wind_samples=False)
+    processed_data_full = preprocess_data(wind_data, remove_low_wind_samples=False)
     labels, frequency_clusters = predict_cluster(processed_data_full['training_data'], n_clusters,
                                                  res['data_processing_pipeline'].predict, res['cluster_mapping'])
     fig, ax = plt.subplots(2, 1, sharex=True, sharey=True)
@@ -357,6 +357,6 @@ if __name__ == '__main__':
     ax[1].set_title('Full dataset')
     plot_bars(frequency_clusters.reshape((1, -1)), ax=ax[1], xticklabels=range(1, n_clusters+1))
     for a in ax: a.set_ylabel('Cluster frequency [%]')
-    if not plots_interactive: plt.savefig(result_dir + 'cluster_compare_filtered_and_full_data' + loc_info + '.pdf')
-    # visualise_patterns(n_clusters, processed_data_full, labels, plot_info=loc_info)
+    if not plots_interactive: plt.savefig(result_dir + 'cluster_compare_filtered_and_full_data' + data_info + '.pdf')
+    # visualise_patterns(n_clusters, processed_data_full, labels, plot_info=data_info)
     if plots_interactive: plt.show() 
