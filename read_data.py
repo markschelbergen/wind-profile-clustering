@@ -5,16 +5,16 @@ import xarray as xr
 import numpy as np
 from os.path import join as path_join
 
-#awe era5 processing utils
-from utils import compute_level_heights
+from config import use_data, start_year, final_year, latitude , longitude, \
+                   DOWA_data_dir, location, \
+                   era5_data_dir, model_level_file_name_format, surface_file_name_format, read_model_level_up_to, height_range
 
-import dask # clustering env no dask - FIX before running on cluster
+from era5_ml_height_calc import compute_level_heights
+
+import dask # clustering env no dask?? - FIX before running on cluster
 # only as many threads as requested CPUs | only one to be requested, more threads don't seem to be used
 dask.config.set(scheduler='synchronous')
 
-era5_data_dir = '/cephfs/user/s6lathim/ERA5Data-112/'
-model_level_file_name_format = "{:d}_europe_{:d}_130_131_132_133_135.nc"  # 'ml_{:d}_{:02d}.netcdf'
-surface_file_name_format = "{:d}_europe_{:d}_152.nc" # 'sfc_{:d}_{:02d}.netcdf'
 
 def read_raw_data(start_year, final_year):
     """"Read ERA5 wind data for adjacent years.
@@ -56,9 +56,7 @@ def read_raw_data(start_year, final_year):
 
     return ds, lons, lats, levels, hours, i_highest_level
 
-def get_wind_data_era5(lat=40, lon=1, start_year=2010, final_year=2010, max_level=112):
-    heights_of_interest = [ 10.,  20.,  40.,  60.,  80., 100., 120., 140., 150., 160., 180.,
-        200., 220., 250., 300., 500., 600.]
+def get_wind_data_era5(heights_of_interest, lat=40, lon=1, start_year=2010, final_year=2010, max_level=112):
     ds, lons, lats, levels, hours, i_highest_level = read_raw_data(start_year, final_year)
     i_lat = list(lats).index(lat)
     i_lon = list(lons).index(lon)
@@ -106,4 +104,40 @@ def get_wind_data_era5(lat=40, lon=1, start_year=2010, final_year=2010, max_leve
 
     return wind_data
     
+def get_wind_data():
+    # Get actual lat/lon from chosen DOWA indices - change this in the future to the other way around? FIX
+    from read_data.dowa import lats_dowa_grid, lons_dowa_grid
+    lat = lats_dowa_grid[location['i_lat'], location['i_lon']]
+    lon = lons_dowa_grid[location['i_lat'], location['i_lon']]
+    # round to grid spacing in ERA5 data
+    grid_size = 0.25
+    latitude = round(lat/grid_size)*grid_size
+    longitude = round(lon/grid_size)*grid_size
+
+    data_info = '_' + '_'.join(['_'.join([k,str(v)]) for k,v in location.items()])
+
+    if use_data == 'DOWA':
+        import os
+        #HDF5 library has been updated (1.10.1) (netcdf uses HDF5 under the hood)
+        #file system does not support the file locking that the HDF5 library uses.
+        #In order to read your hdf5 or netcdf files, you need set this environment variable :
+        os.environ["HDF5_USE_FILE_LOCKING"]="FALSE" # check - is this needed? if yes - where set, needed for era5? FIX
+        from read_data.dowa import read_data
+        wind_data = read_data(location, DOWA_data_dir)
+
+        # FIX: start_year - final_year data only!
+        data_info += "_DOWA_{}_{}".format(2008,2017)  # .format(start_year, final_year)
+
+    elif use_data == 'LIDAR':
+        from read_data.fgw_lidar import read_data
+        wind_data = read_data()
+        data_info += "_LIDAR"
+
+    elif use_data == 'ERA5':
+        wind_data = get_wind_data_era5(height_range, lat=latitude, lon=longitude, start_year=start_year, final_year=final_year, max_level=read_model_level_up_to)
+        data_info += "_era5_{}_{}".format(start_year, final_year)
+    else:
+        raise ValueError("Wrong data type specified: {} - no option to read data is executed".format(use_data))
+
+    return wind_data, data_info
 

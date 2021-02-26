@@ -9,7 +9,8 @@ import matplotlib.pyplot as plt
 from copy import copy
 
 from principal_component_analysis import result_dir
-from era5_data_utils import get_wind_data_era5
+
+from read_data import get_wind_data
 
 xlim_pc12 = [-1.1, 1.1]
 ylim_pc12 = [-1.1, 1.1]
@@ -333,22 +334,10 @@ def predict_cluster(training_data, n_clusters, predict_fun, cluster_mapping):
 
 
 if __name__ == '__main__':
-    location = {'iy': 111, 'ix': 56}
-    loc_info = '_' + '_'.join(['_'.join([k,str(v)]) for k,v in location.items()])
-    # Read lidar data
-    #from read_data.fgw_lidar import read_data
-    #data = read_data()
-
-    # Read DOWA data 
-    #from read_data.dowa import read_data
-    #data = read_data(location)
-
-    # Read era5 data
-    data = get_wind_data_era5(lat=40, lon=1, start_year=2010, final_year=2010, max_level=112)
-    loc_info += "_era5"
-
+    wind_data, data_info = get_wind_data()
     from preprocess_data import preprocess_data
     processed_data = preprocess_data(data)
+
     n_clusters = 8
     res = cluster_normalized_wind_profiles_pca(processed_data['training_data'], n_clusters)
     prl, prp = res['clusters_feature']['parallel'], res['clusters_feature']['perpendicular']

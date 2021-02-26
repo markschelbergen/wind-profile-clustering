@@ -1,62 +1,9 @@
 # -*- coding: utf-8 -*-
-"""Utility functions."""
-import datetime as dt
-from pytz import utc
+"""ERA5 model level height calculation."""
 import numpy as np
 
-datetime0 = dt.datetime(1900, 1, 1, 0, 0, 0, tzinfo=utc)  # Date used as starting point for counting hours.
 r_d = 287.06  # Gas constant for dry air [J/K/kg]
 g = 9.80665  # Gravitational acceleration [m/s^2]
-
-
-def zip_el(*args):
-    """Zip iterables, only if input lists have same length.
-
-    Args:
-        *args: Variable number of lists.
-
-    Returns:
-        list: Iterator that aggregates elements from each of the input lists.
-
-    Raises:
-        AssertError: If input lists do not have the same length.
-
-    """
-    lengths = [len(l) for l in args]
-    assert all([l == lengths[0] for l in lengths[1:]]), "All the input lists should have the same length."
-    return zip(*args)
-
-
-def hour_to_date_str(hour, str_format=None):
-    """Convert hour since 1900-01-01 00:00 to string of date.
-
-    Args:
-        hour (int): Hour since 1900-01-01 00:00.
-        str_format (str, optional): Explicit format string from datetime packages. Defaults to isoformat.
-
-    Returns:
-        str: String representing the timestamp.
-
-    """
-    date = hour_to_date(hour)
-    if str_format is None:
-        return date.isoformat()
-    else:
-        return date.strftime(str_format)
-
-
-def hour_to_date(hour):
-    """Convert hour since 1900-01-01 00:00 to datetime object.
-
-    Args:
-        hour (int): Hour since 1900-01-01 00:00.
-
-    Returns:
-        datetime: Datetime object of timestamp.
-
-    """
-    date = (datetime0 + dt.timedelta(hours=int(hour)))
-    return date
 
 
 def get_ph_levs(level, sp):
@@ -184,21 +131,3 @@ def compute_level_heights(levels, surface_pressure, levels_temperature, levels_h
             densities[i_hr, i_level] = pf/(r_d*levels_temperature[i_hr, i_level])
 
     return heights, densities
-
-
-def flatten_dict(input_dict, parent_key='', sep='.'):
-    """"Recursive function to convert multi-level dictionary to flat dictionary. 
-
-    Args: 
-        input_dict (dict): Dictionary to be flattened
-        parent_key (str): Key under which 'input_dict' is stored in the higher-level dictionary
-        sep (str): Separator used for joining together the keys pointing to the lower-level object.
-    """
-    items = []
-    for k, v in input_dict.items():
-        new_key = parent_key + sep + str(k).replace(" ", "") if parent_key else str(k).replace(" ", "")
-        if isinstance(v, dict):
-            items.extend(flatten_dict(v, new_key, sep=sep).items())
-        else: 
-            items.append((new_key, v))
-    return dict(items)

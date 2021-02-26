@@ -5,8 +5,6 @@ from pathlib import Path
 
 path = Path(__file__).parent
 
-data_dir = "/home/mark/WindData/DOWA/"  # '/media/mark/LaCie/DOWA/'
-
 
 with open(path / 'dowa_grid.pickle', 'rb') as f:
     try:
@@ -55,7 +53,7 @@ def find_closest_dowa_grid_point(lat, lon):
     return i_lat, i_lon
 
 
-def read_netcdf(i_lat, i_lon):
+def read_netcdf(i_lat, i_lon, data_dir):
     iy, ix = i_lat+1, i_lon+1
     file = '{}DOWA_40h12tg2_fERA5_NETHERLANDS.NL_' \
            'ix{:03d}_iy{:03d}_2008010100-2018010100_v1.0.nc'.format(data_dir, ix, iy)
@@ -82,28 +80,22 @@ def read_netcdf(i_lat, i_lon):
     return vw_east, vw_north, datetime, altitude
 
 
-def read_data(grid_points={'coords': (52.85, 3.44)}):
-    if grid_points.get('name', None) == 'mmij':
-        iy, ix = 111, 56
-        vw_east, vw_north, dts, alts = read_netcdf(iy-1, ix-1)
-    elif grid_points.get('name', None) == 'mmc':
-        iy, ix = 74, 99
-        vw_east, vw_north, dts, alts = read_netcdf(iy-1, ix-1)
+def read_data(grid_points={'coords': (52.85, 3.44)}, data_dir):
     if 'coords' in grid_points:
         k, l = find_closest_dowa_grid_point(*grid_points['coords'])
-        vw_east, vw_north, dts, alts = read_netcdf(k, l)
+        vw_east, vw_north, dts, alts = read_netcdf(k, l, data_dir)
     elif 'i_lat' in grid_points and 'i_lon' in grid_points:
         k, l = grid_points['i_lat'], grid_points['i_lon']
-        vw_east, vw_north, dts, alts = read_netcdf(k, l)
+        vw_east, vw_north, dts, alts = read_netcdf(k, l, data_dir)
     elif 'iy' in grid_points and 'ix' in grid_points:
-        vw_east, vw_north, dts, alts = read_netcdf(grid_points['iy']-1, grid_points['ix']-1)
+        vw_east, vw_north, dts, alts = read_netcdf(grid_points['iy']-1, grid_points['ix']-1, data_dir)
     elif 'ids' in grid_points:  # Mulitple locations.
         i_lats, i_lons = grid_points['ids'][0], grid_points['ids'][1]
         n_locs = len(i_lats)
 
         first_iter = True
         for i_loc, (i_lat, i_lon) in enumerate(zip(i_lats, i_lons)):
-            vwe, vwn, dts, alts = read_netcdf(i_lat, i_lon)
+            vwe, vwn, dts, alts = read_netcdf(i_lat, i_lon, data_dir)
             if first_iter:
                 n_alts = len(alts)
                 vw_east = np.zeros((len(dts), n_locs, n_alts))

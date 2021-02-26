@@ -1,7 +1,7 @@
 import numpy as np
 from copy import copy
 
-from era5_data_utils import get_wind_data_era5
+from read_data import get_wind_data
 
 ref_vector_height = 100.
 
@@ -81,11 +81,6 @@ def preprocess_data(data, remove_low_wind_samples=True, return_copy=True):
     return data
 
 if __name__ == '__main__':
-    # Read DOWA data
-    #from read_data.dowa import read_data
-    #wind_data = read_data({'i_lat': 110, 'i_lon': 55})
-
-    # Read era5 data
-    wind_data = get_wind_data_era5(lat=40, lon=1, start_year=2010, final_year=2010, max_level=112)
-
+    # Read data
+    wind_data, loc_info = get_wind_data()
     preprocess_data(wind_data)

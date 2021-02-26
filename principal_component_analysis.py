@@ -7,7 +7,7 @@ mpl.use('Pdf')
 import matplotlib.pyplot as plt
 from matplotlib.colors import ListedColormap, LogNorm
 
-from era5_data_utils import get_wind_data_era5
+from read_data import get_wind_data
 
 xlim_pc12 = [-1.1, 1.1]
 ylim_pc12 = [-1.1, 1.1]
@@ -169,16 +169,8 @@ def analyse_pc(wind_data, loc_info=""):
 
 
 if __name__ == '__main__':
-    location = {'i_lat': 110, 'i_lon': 55}
-    loc_info = '_' + '_'.join(['_'.join([k,str(v)]) for k,v in location.items()])
-    # Read DOWA data
-    #from read_data.dowa import read_data
-    #wind_data = read_data(location)
-    # Read era5 data
-    wind_data = get_wind_data_era5(lat=40, lon=1, start_year=2010, final_year=2010, max_level=112)
-    loc_info += "_era5"
-
+    wind_data, data_info = get_wind_data()
     from preprocess_data import preprocess_data
     wind_data = preprocess_data(wind_data)
 
-    analyse_pc(wind_data, loc_info=loc_info)
+    analyse_pc(wind_data, loc_info=data_info)
