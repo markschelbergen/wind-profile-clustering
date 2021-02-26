@@ -80,7 +80,7 @@ def read_netcdf(i_lat, i_lon, data_dir):
     return vw_east, vw_north, datetime, altitude
 
 
-def read_data(grid_points={'coords': (52.85, 3.44)}, data_dir):
+def read_data(grid_points={'coords': (52.85, 3.44)}, data_dir='DOWA/'):
     if 'coords' in grid_points:
         k, l = find_closest_dowa_grid_point(*grid_points['coords'])
         vw_east, vw_north, dts, alts = read_netcdf(k, l, data_dir)
