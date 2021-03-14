@@ -10,7 +10,6 @@ from config import plots_interactive, result_dir
 if not plots_interactive:
     mpl.use('Pdf')
 import matplotlib.pyplot as plt
-from matplotlib.colors import ListedColormap, LogNorm
 
 from read_requested_data import get_wind_data
 
@@ -127,6 +126,7 @@ def plot_wind_profile_shapes(altitudes, wind_prl, wind_prp, wind_mag=None, n_row
                     borderaxespad=0, ncol=4)
     if not plots_interactive: plt.savefig(result_dir + 'cluster_wind_profile_shapes' + plot_info + '.pdf')
 
+
 def plot_bars(array2d, bars_labels=None, ax=None, legend_title="", xticklabels=None):
     n_bars = array2d.shape[0]
     n_cols = array2d.shape[1]
@@ -176,6 +176,7 @@ def visualise_patterns(n_clusters, wind_data, sample_labels, frequency_clusters,
     n_years_group = 1
     year_range = range(wind_data['years'][0], wind_data['years'][1] + 2, n_years_group)
     years = wind_data['datetime'].astype('datetime64[Y]').astype(int) + 1970
+
     freq2d_year_bin = np.zeros((len(year_range), n_clusters))
     year_bin_labels = []
     for k, (y0, y1) in enumerate(zip(year_range[:-1], year_range[1:])):
@@ -190,13 +191,14 @@ def visualise_patterns(n_clusters, wind_data, sample_labels, frequency_clusters,
         year_bin_labels.append(lbl)
         for i_c in range(n_clusters):
             freq2d_year_bin[k, i_c] = np.sum(lbls_yr == i_c)/n_samples_yr * 100.
+
     plot_bars(freq2d_year_bin, year_bin_labels, ax=ax_bars[0], legend_title="Year bins")
     ax_bars[0].set_ylabel("Frequency [%]")
 
     # Study seasonal variation.
     month_bin_lims = list(range(1, 13))
     month_bin_lbls = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September',
-                        'October', 'November', 'December']
+                      'October', 'November', 'December']
     month_bin_lbls = [m[:3] for m in month_bin_lbls]
     months = wind_data['datetime'].astype('datetime64[M]').astype(int) % 12 + 1
 
@@ -256,8 +258,8 @@ def visualise_patterns(n_clusters, wind_data, sample_labels, frequency_clusters,
     ax_bars[3].set_ylabel("Within-cluster\nfrequency [%]")
 
     # Study wind direction variation. Downwind direction: + CCW w.r.t. East
-    wind_dir_bin_lims = list(np.arange(-180+45/2, 180, 45))  #list(range(-135, 135+1, 90))
-    wind_dir_bin_lbls = ['NE', 'N', 'NW', 'W', 'SW', 'S', 'SE', 'E']  #['South', 'East', 'North', 'West']
+    wind_dir_bin_lims = list(np.arange(-180+45/2, 180, 45))  # list(range(-135, 135+1, 90))
+    wind_dir_bin_lbls = ['NE', 'N', 'NW', 'W', 'SW', 'S', 'SE', 'E']  # ['South', 'East', 'North', 'West']
 
     wind_dir = wind_data['reference_vector_direction'] * 180./np.pi
     assert wind_dir.min() >= -180. and wind_dir.max() <= 180.
@@ -317,7 +319,6 @@ def projection_plot_of_clusters(training_data_reduced, labels, clusters_pc, plot
     plt.xlabel('PC1')
     plt.ylabel('PC2')
     if not plots_interactive: plt.savefig(result_dir + 'cluster_projection_plot_of_clusters' + plot_info + '.pdf')
-
 
 
 def predict_cluster(training_data, n_clusters, predict_fun, cluster_mapping):

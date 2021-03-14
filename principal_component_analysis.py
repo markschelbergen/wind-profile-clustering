@@ -45,7 +45,7 @@ def plot_mean_and_pc_profiles(altitudes, var, get_profile, plot_info=""):
     ax_mean.set_xlim(x_lim_profiles)
     ax_mean.set_xlabel(x_label)
     ax_mean.legend(bbox_to_anchor=(1., 1.16, 3, 0.2), loc="lower left", mode="expand",
-                borderaxespad=0, ncol=4)
+                   borderaxespad=0, ncol=4)
 
     # Add plot window for hodograph to existing plot windows and plot it.
     y0 = ax[1, 0]._position.y0 + .05
@@ -88,7 +88,8 @@ def plot_mean_and_pc_profiles(altitudes, var, get_profile, plot_info=""):
 
                 marker_counter += 1
                 ax[i_pc, i_col].plot(0.1, 0.1, 's', mfc="white", alpha=1, ms=12, mec='k', transform=ax[i_pc, i_col].transAxes)
-                ax[i_pc, i_col].plot(0.1, 0.1, marker='${}$'.format(marker_counter), alpha=1, ms=7, mec='k', transform=ax[i_pc, i_col].transAxes)
+                ax[i_pc, i_col].plot(0.1, 0.1, marker='${}$'.format(marker_counter), alpha=1, ms=7,
+                                     mec='k', transform=ax[i_pc, i_col].transAxes)
             ax[i_pc, i_col].grid(True)
 
     # Add labels on x-axes.
@@ -127,7 +128,10 @@ def plot_frequency_projection(data_pc, plot_info=""):
     plt.grid()
     plt.xlabel('PC1')
     plt.ylabel('PC2')
-    if not plots_interactive: plt.savefig(result_dir + 'pc_frequency_projection' + plot_info + '.pdf')
+    if not plots_interactive:
+        plt.savefig(result_dir + 'pc_frequency_projection' + plot_info + '.pdf')
+
+
 
 def analyse_pc(wind_data, loc_info=""):
     altitudes = wind_data['altitude']
@@ -139,7 +143,8 @@ def analyse_pc(wind_data, loc_info=""):
 
     # print("{} features reduced to {} components.".format(n_features, n_components))
     data_pc = pipeline.fit_transform(normalized_data)
-    print("{:.1f}% of variance retained using first two principal components.".format(np.sum(pca.explained_variance_ratio_[:2])*100))
+    print("{:.1f}% of variance retained using first two principal components.".format(
+        np.sum(pca.explained_variance_ratio_[:2])*100))
     cum_var_exp = list(accumulate(pca.explained_variance_ratio_*100))
     print("Cumulative variance retained: " + ", ".join(["{:.2f}".format(var) for var in cum_var_exp]))
     var = pca.explained_variance_
@@ -151,6 +156,7 @@ def analyse_pc(wind_data, loc_info=""):
     for i, (pc1, pc2) in enumerate(zip(markers_pc1, markers_pc2)):
         plt.plot(pc1, pc2, marker='${}$'.format(i+1), alpha=1, ms=7, mec='k')
     if not plots_interactive: plt.savefig(result_dir + 'pc_frequency_projection' + loc_info + '_markers.pdf')
+
     def get_pc_profile(i_pc=-1, multiplier=1., plot_pc=False):
         # Determine profile data by transforming data in PC to original coordinate system.
         if i_pc == -1:
@@ -174,6 +180,7 @@ if __name__ == '__main__':
     wind_data, data_info = get_wind_data()
     from preprocess_data import preprocess_data
     wind_data = preprocess_data(wind_data)
-
+    # Run principal component analysis
     analyse_pc(wind_data, loc_info=data_info)
+
     if plots_interactive: plt.show()

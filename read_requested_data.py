@@ -37,13 +37,13 @@ def read_raw_data(start_year, final_year):
             ml_files.append(path_join(era5_data_dir, model_level_file_name_format.format(y, m)))
             sfc_files.append(path_join(era5_data_dir, surface_file_name_format.format(y, m)))
     # Load the data from the NetCDF files.
-    ds = xr.open_mfdataset(ml_files+sfc_files, decode_times=False)
+    ds = xr.open_mfdataset(ml_files+sfc_files, decode_times=True)
 
     lons = ds['longitude'].values
     lats = ds['latitude'].values
 
     levels = ds['level'].values  # Model level numbers.
-    hours = ds['time'].values  # Hours since 1900-01-01 00:00:0.0, see: print(nc.variables['time']).
+    hours = ds['time'].values
 
     dlevels = np.diff(levels)
     if not (np.all(dlevels == 1) and levels[-1] == 137):
@@ -63,7 +63,7 @@ def get_wind_data_era5(heights_of_interest, lat=40, lon=1, start_year=2010, fina
 
     i_highest_level = list(levels).index(max_level)
 
-    # Read single location wind data 
+    # Read single location wind data
     v_levels_east = ds['u'][:, i_highest_level:, i_lat, i_lon].values
     v_levels_north = ds['v'][:, i_highest_level:, i_lat, i_lon].values
 
@@ -89,21 +89,22 @@ def get_wind_data_era5(heights_of_interest, lat=40, lon=1, start_year=2010, fina
             raise ValueError("Requested height ({:.2f} m) is higher than height of highest model level."
                              .format(level_heights[i_hr, 0]))
         v_req_alt_east[i_hr, :] = np.interp(heights_of_interest, level_heights[i_hr, ::-1],
-	                               v_levels_east[i_hr, ::-1])
+                                            v_levels_east[i_hr, ::-1])
         v_req_alt_north[i_hr, :] = np.interp(heights_of_interest, level_heights[i_hr, ::-1],
-	                               v_levels_north[i_hr, ::-1])
+                                             v_levels_north[i_hr, ::-1])
 
     wind_data = {
-        'wind_speed_east' : v_req_alt_east,
-        'wind_speed_north' : v_req_alt_north,
-        'n_samples' : len(hours),
-        'datetime' : hours,
-        'altitude' : heights_of_interest,
-        'years' : (start_year, final_year)
+        'wind_speed_east': v_req_alt_east,
+        'wind_speed_north': v_req_alt_north,
+        'n_samples': len(hours),
+        'datetime': ds['time'].values,
+        'altitude': heights_of_interest,
+        'years': (start_year, final_year)
     }
 
     return wind_data
-    
+
+
 def get_wind_data():
     # Get actual lat/lon from chosen DOWA indices - change this in the future to the other way around? FIX
     from read_data.dowa import lats_dowa_grid, lons_dowa_grid
