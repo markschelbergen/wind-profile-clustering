@@ -11,7 +11,7 @@ from config import use_data, start_year, final_year, latitude , longitude, \
 
 from era5_ml_height_calc import compute_level_heights
 
-import dask # clustering env no dask?? - FIX before running on cluster
+import dask
 # only as many threads as requested CPUs | only one to be requested, more threads don't seem to be used
 dask.config.set(scheduler='synchronous')
 
@@ -106,7 +106,7 @@ def get_wind_data_era5(heights_of_interest, lat=40, lon=1, start_year=2010, fina
 
 
 def get_wind_data():
-    # Get actual lat/lon from chosen DOWA indices - change this in the future to the other way around? FIX
+    # Get actual lat/lon from chosen DOWA indices - change this in the future to the other way around? TODO
     from read_data.dowa import lats_dowa_grid, lons_dowa_grid
     lat = lats_dowa_grid[location['i_lat'], location['i_lon']]
     lon = lons_dowa_grid[location['i_lat'], location['i_lon']]
