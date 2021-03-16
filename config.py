@@ -36,7 +36,7 @@ final_year = 2017
 # Single location processing
 latitude = 0
 longitude = 0
-# FIX: get dowa indices by lat/lon - for now: dowa loc indices used for both
+# TODO: get dowa indices by lat/lon - for now: DOWA loc indices used for both
 
 # --------------------------- DOWA
 # data contains years 2008 to 2017
