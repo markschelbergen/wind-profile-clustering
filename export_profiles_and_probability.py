@@ -42,8 +42,8 @@ def export_frequency_distribution(cut_wind_speeds_file, output_file, labels_full
         # procedure consistent with the wind property used for characterizing the cut-in and cut-out wind speeds, i.e.
         # the wind speed at 100 m height.
         for j, (v0, v1) in enumerate(zip(v[:-1], v[1:])):
-            samples_in_bin = (labels_full == i_c) & (normalisation_wind_speeds*sf >= v0) & \
-                             (normalisation_wind_speeds*sf < v1)
+            samples_in_bin = (labels_full == i_c) & (normalisation_wind_speeds/sf >= v0) & \
+                             (normalisation_wind_speeds/sf < v1)
             freq_2d[i_c, j] = np.sum(samples_in_bin) / n_samples * 100.
 
     distribution_data = {'frequency': freq_2d, 'wind_speed_bin_limits': v_bin_limits}
