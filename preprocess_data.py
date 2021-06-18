@@ -1,6 +1,8 @@
 import numpy as np
 from copy import copy
 
+from read_requested_data import get_wind_data
+
 ref_vector_height = 100.
 
 
@@ -28,16 +30,16 @@ def express_profiles_wrt_ref_vector(data):
                                       data['wind_direction'])
 
     data['wind_speed_parallel'] = data['wind_speed_east']*np.cos(ref_dir).reshape((-1, 1)) + \
-                                  data['wind_speed_north']*np.sin(ref_dir).reshape((-1, 1))
+        data['wind_speed_north']*np.sin(ref_dir).reshape((-1, 1))
     data['wind_speed_perpendicular'] = -data['wind_speed_east']*np.sin(ref_dir).reshape((-1, 1)) + \
-                                       data['wind_speed_north']*np.cos(ref_dir).reshape((-1, 1))
+        data['wind_speed_north']*np.cos(ref_dir).reshape((-1, 1))
     return data
 
 
 def reduce_wind_data(data, mask_keep):
     n_samples_after_filter = np.sum(mask_keep)
     print("{:.1f}% of data/{} samples remain after filtering.".format(n_samples_after_filter/data['n_samples'] * 100.,
-                                                                       n_samples_after_filter))
+                                                                      n_samples_after_filter))
     for k, val in data.items():
         if k in ['altitude', 'n_samples', 'n_locs', 'years']:
             continue
@@ -57,13 +59,14 @@ def remove_lt_mean_wind_speed_value(data, min_mean_wind_speed):
 
 def normalize_data(data):
     norm_ref = np.percentile(data['wind_speed'], 90., axis=1).reshape((-1, 1))
-
+    print('shape_single', data['wind_speed_parallel'].shape)
+    print('shape_norm', norm_ref.shape)
     training_data_prl = data['wind_speed_parallel']/norm_ref
     training_data_prp = data['wind_speed_perpendicular']/norm_ref
 
     data['training_data'] = np.concatenate((training_data_prl, training_data_prp), 1)
     data['normalisation_value'] = norm_ref.reshape(-1)
-
+    print('shape_single', data['training_data'].shape)
     return data
 
 
@@ -80,6 +83,6 @@ def preprocess_data(data, remove_low_wind_samples=True, return_copy=True):
 
 
 if __name__ == '__main__':
-    from read_data.dowa import read_data
-    wind_data = read_data({'i_lat': 110, 'i_lon': 55})
+    # Read data
+    wind_data, loc_info = get_wind_data()
     preprocess_data(wind_data)

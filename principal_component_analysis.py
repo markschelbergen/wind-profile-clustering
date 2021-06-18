@@ -1,6 +1,14 @@
 from sklearn.decomposition import PCA
 from itertools import accumulate
 import numpy as np
+
+import matplotlib as mpl
+
+from config import plots_interactive, result_dir
+from read_requested_data import get_wind_data
+
+if not plots_interactive:
+    mpl.use('Pdf')
 import matplotlib.pyplot as plt
 from matplotlib.colors import ListedColormap, LogNorm
 
@@ -9,7 +17,7 @@ ylim_pc12 = [-1.1, 1.1]
 x_lim_profiles = [-0.8, 1.25]
 
 
-def plot_mean_and_pc_profiles(altitudes, var, get_profile):
+def plot_mean_and_pc_profiles(altitudes, var, get_profile, plot_info=""):
     plot_n_pcs = 2
     n_cols = 3
     n_rows = plot_n_pcs
@@ -37,7 +45,7 @@ def plot_mean_and_pc_profiles(altitudes, var, get_profile):
     ax_mean.set_xlim(x_lim_profiles)
     ax_mean.set_xlabel(x_label)
     ax_mean.legend(bbox_to_anchor=(1., 1.16, 3, 0.2), loc="lower left", mode="expand",
-                borderaxespad=0, ncol=4)
+                   borderaxespad=0, ncol=4)
 
     # Add plot window for hodograph to existing plot windows and plot it.
     y0 = ax[1, 0]._position.y0 + .05
@@ -80,7 +88,8 @@ def plot_mean_and_pc_profiles(altitudes, var, get_profile):
 
                 marker_counter += 1
                 ax[i_pc, i_col].plot(0.1, 0.1, 's', mfc="white", alpha=1, ms=12, mec='k', transform=ax[i_pc, i_col].transAxes)
-                ax[i_pc, i_col].plot(0.1, 0.1, marker='${}$'.format(marker_counter), alpha=1, ms=7, mec='k', transform=ax[i_pc, i_col].transAxes)
+                ax[i_pc, i_col].plot(0.1, 0.1, marker='${}$'.format(marker_counter), alpha=1, ms=7,
+                                     mec='k', transform=ax[i_pc, i_col].transAxes)
             ax[i_pc, i_col].grid(True)
 
     # Add labels on x-axes.
@@ -89,9 +98,10 @@ def plot_mean_and_pc_profiles(altitudes, var, get_profile):
             ax[-1, i_col].set_xlabel("Coefficient of PC [-]")
         else:
             ax[-1, i_col].set_xlabel(x_label)
+    if not plots_interactive: plt.savefig(result_dir + 'pc_mean_and_pc_profiles' + plot_info + '.pdf')
 
 
-def plot_frequency_projection(data_pc):
+def plot_frequency_projection(data_pc, plot_info=""):
     plt.figure(figsize=(5, 2.5))
     plt.subplots_adjust(top=0.975, bottom=0.178, left=0.15, right=0.94)
 
@@ -102,7 +112,6 @@ def plot_frequency_projection(data_pc):
     clrs_low_values[0, :] = 0.
     clrs_high_values = cmap_baseline(np.linspace(.5, 1., int(256*(1-frac))))
     cmap = ListedColormap(np.vstack((clrs_low_values, clrs_high_values)))
-
     n_bins = 120
     vmax = 1200
     h, _, _, im = plt.hist2d(data_pc[:, 0], data_pc[:, 1], bins=n_bins, cmap=cmap, norm=LogNorm(vmin=1, vmax=vmax))
@@ -119,12 +128,14 @@ def plot_frequency_projection(data_pc):
     plt.grid()
     plt.xlabel('PC1')
     plt.ylabel('PC2')
+    if not plots_interactive:
+        plt.savefig(result_dir + 'pc_frequency_projection' + plot_info + '.pdf')
 
 
-def analyse_pc(wind_data):
+
+def analyse_pc(wind_data, loc_info=""):
     altitudes = wind_data['altitude']
     normalized_data = wind_data['training_data']
-
     # Perform principal component analyis.
     n_features = normalized_data.shape[1]
     pca = PCA(n_components=n_features)
@@ -132,17 +143,19 @@ def analyse_pc(wind_data):
 
     # print("{} features reduced to {} components.".format(n_features, n_components))
     data_pc = pipeline.fit_transform(normalized_data)
-    print("{:.1f}% of variance retained using first two principal components.".format(np.sum(pca.explained_variance_ratio_[:2])*100))
+    print("{:.1f}% of variance retained using first two principal components.".format(
+        np.sum(pca.explained_variance_ratio_[:2])*100))
     cum_var_exp = list(accumulate(pca.explained_variance_ratio_*100))
     print("Cumulative variance retained: " + ", ".join(["{:.2f}".format(var) for var in cum_var_exp]))
     var = pca.explained_variance_
 
     # Plot results.
-    plot_frequency_projection(data_pc)
+    plot_frequency_projection(data_pc, plot_info=loc_info)
     markers_pc1, markers_pc2 = [-var[0]**.5, var[0]**.5, 0, 0], [0, 0, -var[1]**.5, var[1]**.5]
     plt.plot(markers_pc1, markers_pc2, 's', mfc="white", alpha=1, ms=12, mec='k')
     for i, (pc1, pc2) in enumerate(zip(markers_pc1, markers_pc2)):
         plt.plot(pc1, pc2, marker='${}$'.format(i+1), alpha=1, ms=7, mec='k')
+    if not plots_interactive: plt.savefig(result_dir + 'pc_frequency_projection' + loc_info + '_markers.pdf')
 
     def get_pc_profile(i_pc=-1, multiplier=1., plot_pc=False):
         # Determine profile data by transforming data in PC to original coordinate system.
@@ -160,13 +173,14 @@ def analyse_pc(wind_data):
         prp = profile[len(altitudes):]
         return prl, prp
 
-    plot_mean_and_pc_profiles(altitudes, var, get_pc_profile)
+    plot_mean_and_pc_profiles(altitudes, var, get_pc_profile, plot_info=loc_info)
 
 
 if __name__ == '__main__':
-    from read_data.dowa import read_data
-    wind_data = read_data({'name': 'mmij'})
+    wind_data, data_info = get_wind_data()
     from preprocess_data import preprocess_data
     wind_data = preprocess_data(wind_data)
-    analyse_pc(wind_data)
-    plt.show()
+    # Run principal component analysis
+    analyse_pc(wind_data, loc_info=data_info)
+
+    if plots_interactive: plt.show()
