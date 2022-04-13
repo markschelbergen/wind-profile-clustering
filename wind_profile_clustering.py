@@ -45,10 +45,10 @@ def cluster_normalized_wind_profiles_pca(training_data, n_clusters, n_pcs=5, reo
 
     res = {
         'clusters_pc': clusters_pc,
-        'clusters_feature': {
-            'parallel': clusters_feature[:, :n_altitudes],
-            'perpendicular': clusters_feature[:, n_altitudes:]
-        },
+        'clusters_feature': clusters_feature,
+        #     'parallel': clusters_feature[:, :n_altitudes],
+        #     'perpendicular': clusters_feature[:, n_altitudes:]
+        # },
         'frequency_clusters': freq,
         'sample_labels': labels,
         'fit_inertia': cluster_model.inertia_,
@@ -61,8 +61,8 @@ def cluster_normalized_wind_profiles_pca(training_data, n_clusters, n_pcs=5, reo
     return res
 
 
-def plot_wind_profile_shapes(altitudes, wind_prl, wind_prp, wind_mag=None, n_rows=2):
-    n_profiles = len(wind_prl)
+def plot_wind_profile_shapes(altitudes, wind_mag, n_rows=2):
+    n_profiles = len(wind_mag)
     x_label0 = r"$\tilde{v}$ [-]"
     x_label1 = r"$\tilde{v}_{\parallel}$ [-]"
     y_label1 = r"$\tilde{v}_{\bot}$ [-]"
@@ -73,6 +73,8 @@ def plot_wind_profile_shapes(altitudes, wind_prl, wind_prp, wind_mag=None, n_row
     for j in range(n_rows):
         height_ratios[2*j] = 1.8
     fig, ax = plt.subplots(2*n_rows, n_cols, figsize=figsize, sharex=True, gridspec_kw={'height_ratios': height_ratios})
+    if len(ax.shape) == 1:
+        ax = ax.reshape((2*n_rows, -1))
     wspace = 0.2
     plt.subplots_adjust(top=0.955, bottom=0.05, left=0.08, right=0.98, hspace=0.2, wspace=wspace)
 
@@ -82,19 +84,11 @@ def plot_wind_profile_shapes(altitudes, wind_prl, wind_prp, wind_mag=None, n_row
         ax[1+2*j, 0].set_ylabel(y_label1)
 
     for i in range(n_profiles):
-        prl, prp = wind_prl[i], wind_prp[i]
         k = i%n_cols
         j = i//n_cols*2
-        ax[j, k].plot(prl, altitudes, label="Parallel", color='#ff7f0e')
-        ax[j, k].plot(prp, altitudes, label="Perpendicular", color='#1f77b4')
+        ax[j, k].plot(wind_mag[i], altitudes, label='Magnitude', color='#ff7f0e')
         ax[0, 0].get_shared_y_axes().join(ax[0, 0], ax[j, k])
 
-        wind_dir = []
-        for v_prl, v_prp in zip(wind_prl[i, :], wind_prp[i, :]):
-            wind_dir.append(np.arctan2(v_prp, v_prl))
-
-        if wind_mag is not None:
-            ax[j, k].plot(wind_mag[i], altitudes, '--', label='Magnitude', color='#2ca02c')
 
         txt = '${}$'.format(i+1)
         ax[j, k].plot(0.1, 0.1, 'o', mfc="white", alpha=1, ms=14, mec='k', transform=ax[j, k].transAxes)
@@ -103,8 +97,6 @@ def plot_wind_profile_shapes(altitudes, wind_prl, wind_prp, wind_mag=None, n_row
         ax[j, k].grid(True)
         ax[j, k].set_xlabel(x_label0)
 
-        ax[j+1, k].plot(prl, prp, color='#7f7f7f')
-        ax[j+1, k].plot([0, prl[0]], [0, prp[0]], ':', color='#7f7f7f')
         ax[j+1, k].grid(True)
         ax[j+1, k].axes.set_aspect('equal')
         ax[j+1, k].set_ylim([-.7, .7])
@@ -277,9 +269,10 @@ def visualise_patterns(n_clusters, wind_data, sample_labels, frequency_clusters)
     ax_bars[4].set_ylabel("Within-cluster\nfrequency [%]")
 
 
-def projection_plot_of_clusters(training_data_reduced, labels, clusters_pc):
-    plt.figure(figsize=(4.2, 2.5))
-    plt.subplots_adjust(top=0.975, bottom=0.178, left=0.18, right=0.94)
+def projection_plot_of_clusters(x, y, labels, clusters_pc, ax=None, plot_markers=True, axis_labels=['PC1', 'PC2']):
+    if ax is None:
+        ax = plt.figure(figsize=(4.2, 2.5)).gca()
+        plt.subplots_adjust(top=0.975, bottom=0.178, left=0.18, right=0.94)
     if len(labels) > 5e4:
         alpha = .01
     else:
@@ -292,19 +285,20 @@ def projection_plot_of_clusters(training_data_reduced, labels, clusters_pc):
     for i, c in enumerate(clrs):
         # Draw all data points belonging to the respective cluster.
         mask_cluster = labels == i
-        plt.scatter(training_data_reduced[mask_cluster, 0], training_data_reduced[mask_cluster, 1], marker='.', s=15,
+        ax.scatter(x[mask_cluster], y[mask_cluster], marker='.', s=15,
                     c=[c]*np.sum(mask_cluster), alpha=alpha)
 
-        # Draw white circles at cluster centers
-        plt.plot(clusters_pc[i, 0], clusters_pc[i, 1], 'o', mfc="white", alpha=1, ms=14, mec='k')
-        c = clusters_pc[i, :]
-        plt.plot(c[0], c[1], marker='${}$'.format(i+1), alpha=1, ms=7, mec='k')
-    plt.xlim(xlim_pc12)
-    plt.ylim(ylim_pc12)
-    plt.grid()
+        if plot_markers:
+            # Draw white circles at cluster centers
+            ax.plot(clusters_pc[i, 0], clusters_pc[i, 1], 'o', mfc="white", alpha=1, ms=14, mec='k')
+            c = clusters_pc[i, :]
+            ax.plot(c[0], c[1], marker='${}$'.format(i+1), alpha=1, ms=7, mec='k')
+    # ax.set_xlim(xlim_pc12)
+    # ax.set_ylim(ylim_pc12)
+    ax.grid()
 
-    plt.xlabel('PC1')
-    plt.ylabel('PC2')
+    ax.set_xlabel(axis_labels[0])
+    ax.set_ylabel(axis_labels[1])
 
 
 def predict_cluster(training_data, n_clusters, predict_fun, cluster_mapping):
@@ -323,18 +317,30 @@ def predict_cluster(training_data, n_clusters, predict_fun, cluster_mapping):
 
 
 if __name__ == '__main__':
-    from read_data.fgw_lidar import read_data
-    data = read_data()
-    # from read_data.dowa import read_data
-    # data = read_data({'name': 'mmij'})
+    # from read_data.fgw_lidar import read_data
+    # data = read_data()
+    from read_data.dowa import read_data
+    loc = 'mmij'
+    data = read_data({'name': loc})
     from preprocess_data import preprocess_data
     processed_data = preprocess_data(data)
-    n_clusters = 8
-    res = cluster_normalized_wind_profiles_pca(processed_data['training_data'], n_clusters)
-    prl, prp = res['clusters_feature']['parallel'], res['clusters_feature']['perpendicular']
-    plot_wind_profile_shapes(processed_data['altitude'], prl, prp, (prl ** 2 + prp ** 2) ** .5)
+    n_clusters = 3
+    res = cluster_normalized_wind_profiles_pca(processed_data['training_data'], n_clusters, n_pcs=2)
+    plot_wind_profile_shapes(processed_data['altitude'], res['clusters_feature'])
     visualise_patterns(n_clusters, processed_data, res['sample_labels'], res['frequency_clusters'])
-    projection_plot_of_clusters(res['training_data_pc'], res['sample_labels'], res['clusters_pc'])
+
+    fig, ax = plt.subplots(2, 2, figsize=[10, 10])
+    projection_plot_of_clusters(res['training_data_pc'][:, 0], res['training_data_pc'][:, 1], res['sample_labels'], res['clusters_pc'], ax=ax[1, 0])
+    projection_plot_of_clusters(res['training_data_pc'][:, 0], processed_data['normalisation_value'], res['sample_labels'], res['clusters_pc'], ax=ax[0, 0], plot_markers=False)
+    projection_plot_of_clusters(processed_data['normalisation_value'], res['training_data_pc'][:, 1], res['sample_labels'], res['clusters_pc'], ax=ax[1, 1], plot_markers=False)
+
+    if loc == 'mmij':
+        intercept = -.03
+    else:
+        intercept = .24
+    x = np.linspace(-1, 1, 2)
+    slope = .04
+    ax[1, 0].plot(x, x*slope+intercept)
 
     processed_data_full = preprocess_data(data, remove_low_wind_samples=False)
     labels, frequency_clusters = predict_cluster(processed_data_full['training_data'], n_clusters,

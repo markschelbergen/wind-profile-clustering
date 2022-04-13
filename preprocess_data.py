@@ -56,12 +56,10 @@ def remove_lt_mean_wind_speed_value(data, min_mean_wind_speed):
 
 
 def normalize_data(data):
-    norm_ref = np.percentile(data['wind_speed'], 90., axis=1).reshape((-1, 1))
+    # norm_ref = np.percentile(data['wind_speed'], 90., axis=1).reshape((-1, 1))
+    norm_ref = np.amax(data['wind_speed'], axis=1).reshape((-1, 1))
 
-    training_data_prl = data['wind_speed_parallel']/norm_ref
-    training_data_prp = data['wind_speed_perpendicular']/norm_ref
-
-    data['training_data'] = np.concatenate((training_data_prl, training_data_prp), 1)
+    data['training_data'] = data['wind_speed']/norm_ref
     data['normalisation_value'] = norm_ref.reshape(-1)
 
     return data
