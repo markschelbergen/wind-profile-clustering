@@ -89,7 +89,6 @@ def plot_wind_profile_shapes(altitudes, wind_mag, n_rows=2):
         ax[j, k].plot(wind_mag[i], altitudes, label='Magnitude', color='#ff7f0e')
         ax[0, 0].get_shared_y_axes().join(ax[0, 0], ax[j, k])
 
-
         txt = '${}$'.format(i+1)
         ax[j, k].plot(0.1, 0.1, 'o', mfc="white", alpha=1, ms=14, mec='k', transform=ax[j, k].transAxes)
         ax[j, k].plot(0.1, 0.1, marker=txt, alpha=1, ms=7, mec='k', transform=ax[j, k].transAxes)
@@ -324,7 +323,7 @@ if __name__ == '__main__':
     data = read_data({'name': loc})
     from preprocess_data import preprocess_data
     processed_data = preprocess_data(data)
-    n_clusters = 3
+    n_clusters = 8
     res = cluster_normalized_wind_profiles_pca(processed_data['training_data'], n_clusters, n_pcs=2)
     plot_wind_profile_shapes(processed_data['altitude'], res['clusters_feature'])
     visualise_patterns(n_clusters, processed_data, res['sample_labels'], res['frequency_clusters'])
@@ -334,13 +333,13 @@ if __name__ == '__main__':
     projection_plot_of_clusters(res['training_data_pc'][:, 0], processed_data['normalisation_value'], res['sample_labels'], res['clusters_pc'], ax=ax[0, 0], plot_markers=False)
     projection_plot_of_clusters(processed_data['normalisation_value'], res['training_data_pc'][:, 1], res['sample_labels'], res['clusters_pc'], ax=ax[1, 1], plot_markers=False)
 
-    if loc == 'mmij':
-        intercept = -.03
-    else:
-        intercept = .24
-    x = np.linspace(-1, 1, 2)
-    slope = .04
-    ax[1, 0].plot(x, x*slope+intercept)
+    # if loc == 'mmij':
+    #     intercept = -.03
+    # else:
+    #     intercept = .24
+    # x = np.linspace(-1, 1, 2)
+    # slope = .04
+    # ax[1, 0].plot(x, x*slope+intercept)
 
     processed_data_full = preprocess_data(data, remove_low_wind_samples=False)
     labels, frequency_clusters = predict_cluster(processed_data_full['training_data'], n_clusters,

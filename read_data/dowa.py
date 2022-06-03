@@ -55,11 +55,13 @@ def find_closest_dowa_grid_point(lat, lon):
     return i_lat, i_lon
 
 
-def read_netcdf(i_lat, i_lon):
+def read_netcdf(i_lat, i_lon, return_ds=False):
     iy, ix = i_lat+1, i_lon+1
     file = '{}DOWA_40h12tg2_fERA5_NETHERLANDS.NL_' \
            'ix{:03d}_iy{:03d}_2008010100-2018010100_v1.0.nc'.format(data_dir, ix, iy)
     ds = xr.open_dataset(file)
+    if return_ds:
+        return ds
     # Variables: Lambert_Conformal, wdir, wspeed, ta (air temperature), p (air pressure), hur (relative humidity)
 
     altitude = ds['height'].values  # [m above Lowest Astronomical Tide]

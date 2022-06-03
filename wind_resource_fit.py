@@ -3,6 +3,7 @@ from scipy.optimize import least_squares
 import matplotlib.pyplot as plt
 from matplotlib import colors
 import seaborn as sns
+from scipy.stats import gaussian_kde
 
 
 def log_law_wind_profile2(z, z_0, v_ref, z_ref, ol):
@@ -39,37 +40,10 @@ def eval_loc(loc='mmij'):
 
     if loc == 'mmc':
         rl = .1
-        profile_shapes = np.array([
-            log_law_wind_profile2(wind_data['altitude'], rl, 1, 100, 0),
-            [-0.23049645, -0.24630588, -0.28568619, -0.2984786, -0.30250081, -0.30061507,
-             -0.29401967, -0.28247869, -0.27554446, -0.26734227, -0.25023463, -0.2305409,
-             -0.20981732, -0.17730358, -0.12295292, 0.05224662, 0.10445487],
-            [0.53796995, 0.4677825, 0.29697192, 0.15289426, 0.05002982, -0.03115965,
-             -0.09539336, -0.14123821, -0.15740775, -0.16916436, -0.18807282, -0.19300634,
-             -0.18839821, -0.16899669, -0.10964258, 0.20027731, 0.32476833]
-        ])
     else:
         rl = .0002
-        profile_shapes = np.array([
-            log_law_wind_profile2(wind_data['altitude'], rl, 1, 100, 0),
-            # [0.39414811, 0.42479271, 0.50331044, 0.55509773, 0.59572789, 0.6302155,
-            # 0.66023076, 0.68549557, 0.69744642, 0.70813617, 0.72941409, 0.74813871,
-            # 0.76576865, 0.79007113, 0.82544999, 0.94181701, 0.98426081],
-            # [0.5697327, 0.62800094, 0.77829325, 0.87917178, 0.94648236, 0.99033134,
-            # 1.01496217, 1.01710714, 1.01456583, 1.00576285, 0.98689486, 0.95632611,
-            # 0.92148368, 0.86155488, 0.74954797, 0.34853172, 0.22740257],
-            [-0.3711465, -0.36080289, -0.33244151, -0.30885968, -0.28844681, -0.2697489,
-             -0.25224161, -0.23609953, -0.22805606, -0.22041634, -0.20493771, -0.19013979,
-             -0.17551816, -0.15421957, -0.12033667, 0.00522151, 0.05460073],
-            [-0.19556192, -0.15759465, -0.0574587, 0.01521438, 0.06230766, 0.09036694,
-             0.10248981, 0.09551204, 0.08906335, 0.07721034, 0.05254306, 0.01804762,
-             -0.01980313, -0.08273582, -0.19623868, -0.58806378, -0.70225751]
-        ])
-    # plt.figure()
-    # for prfl in profile_shapes:
-    #     plt.plot(prfl, wind_data['altitude'])
-    # plt.xlim([0, None])
-    # plt.show()
+    pcs = np.load("pcs_{}.npy".format(loc))
+    shape_modes = np.insert(pcs, 0, log_law_wind_profile2(wind_data['altitude'], rl, 1, 200, 0), axis=0)
 
     x_sol = np.empty((n_samples, 3))
     for i in range(n_samples):
@@ -79,9 +53,46 @@ def eval_loc(loc='mmij'):
             0,
             0
         ])
-        x_sol[i, :] = least_squares(fit_err, x0, args=(v, profile_shapes), bounds=((0, -np.inf, -np.inf), np.inf)).x
+        x_sol[i, :] = least_squares(fit_err, x0, args=(v, shape_modes), bounds=((0, -np.inf, -np.inf), np.inf)).x
         print("{}/{}: {}".format(i, n_samples, x_sol[i, :]))
     np.save("x_sol_{}.npy".format(loc), x_sol)
+
+
+def fit_err_cluster(x, wind_speed, profile_shape):
+    v_err = wind_speed - x*profile_shape
+    return v_err
+
+
+def assign_to_cluster(loc):
+    if loc == 'mmc':
+        rl = .1
+    else:
+        rl = .0002
+
+    from read_data.dowa import read_data
+    wind_data = read_data({'name': loc})
+    wind_speed = (wind_data['wind_speed_east'] ** 2 + wind_data['wind_speed_north'] ** 2) ** .5
+    n_samples = wind_speed.shape[0]
+
+    hand_picked_shapes = np.load("hand_picked_shapes_{}.npy".format(loc))
+    shapes = np.insert(hand_picked_shapes, 0, log_law_wind_profile2(wind_data['altitude'], rl, 1, 200, 0), axis=0)
+    n_curves = shapes.shape[0]
+
+    x_cluster = np.empty((n_samples, 2))
+    for i in range(n_samples):
+        print("{}/{}".format(i, n_samples))
+        v = wind_speed[i, :]
+        v_norm = np.linalg.norm(v)
+        costs = np.empty(n_curves)
+        solutions = np.empty(n_curves)
+        for j in range(n_curves):
+            res = least_squares(fit_err_cluster, v_norm, args=(v, shapes[j, :]), bounds=(0, np.inf))
+            costs[j] = res.cost
+            solutions[j] = res.x
+        i_min = np.argmin(costs)
+        x_cluster[i, 0] = i_min
+        x_cluster[i, 1] = solutions[i_min]
+    np.save("x_cluster_{}.npy".format(loc), x_cluster)
 
 
 def truncate_colormap(cmap, minval=0.0, maxval=1.0, n=100):
@@ -93,64 +104,109 @@ def truncate_colormap(cmap, minval=0.0, maxval=1.0, n=100):
 
 def plot_results(loc='mmij'):
     x_sol = np.load("x_sol_{}.npy".format(loc))
-
-    ax1 = plt.figure().gca()
-    sns.kdeplot(x=x_sol[:, 0], y=x_sol[:, 1], bw_adjust=.6, cmap=truncate_colormap(plt.get_cmap("Blues"), 0.2, 1.))
-    ax2 = plt.figure().gca()
-    sns.kdeplot(x=x_sol[:, 0], y=x_sol[:, 2], bw_adjust=.6, cmap=truncate_colormap(plt.get_cmap("Blues"), 0.2, 1.))
+    x_cluster = np.load("x_cluster_{}.npy".format(loc))
+    hand_picked_shapes = np.load("hand_picked_shapes_{}.npy".format(loc))
 
     altitudes = np.array([10., 20., 40., 60., 80., 100., 120., 140., 150., 160., 180., 200., 220., 250., 300., 500., 600.])
     if loc == 'mmc':
         rl = .1
-        profile_shapes = np.array([
-            log_law_wind_profile2(altitudes, rl, 1, 100, 0),
-            [-0.23049645, -0.24630588, -0.28568619, -0.2984786, -0.30250081, -0.30061507,
-             -0.29401967, -0.28247869, -0.27554446, -0.26734227, -0.25023463, -0.2305409,
-             -0.20981732, -0.17730358, -0.12295292, 0.05224662, 0.10445487],
-            [0.53796995, 0.4677825, 0.29697192, 0.15289426, 0.05002982, -0.03115965,
-             -0.09539336, -0.14123821, -0.15740775, -0.16916436, -0.18807282, -0.19300634,
-             -0.18839821, -0.16899669, -0.10964258, 0.20027731, 0.32476833]
-        ])
     else:
         rl = .0002
-        profile_shapes = np.array([
-            log_law_wind_profile2(altitudes, rl, 1, 100, 0),
-            [-0.3711465, -0.36080289, -0.33244151, -0.30885968, -0.28844681, -0.2697489,
-             -0.25224161, -0.23609953, -0.22805606, -0.22041634, -0.20493771, -0.19013979,
-             -0.17551816, -0.15421957, -0.12033667, 0.00522151, 0.05460073],
-            [-0.19556192, -0.15759465, -0.0574587, 0.01521438, 0.06230766, 0.09036694,
-             0.10248981, 0.09551204, 0.08906335, 0.07721034, 0.05254306, 0.01804762,
-             -0.01980313, -0.08273582, -0.19623868, -0.58806378, -0.70225751]
-        ])
+    pcs = np.load("pcs_{}.npy".format(loc))
+    shape_modes = np.insert(pcs, 0, log_law_wind_profile2(altitudes, rl, 1, 200, 0), axis=0)
+    x_pc_plane = log_law_wind_profile2(100, rl, 1, 600, 0)
 
     if loc == 'mmc':
-        custom_cluster_profiles = np.array([
-            [0.6803515, 0.71853229, 0.81305946, 0.85388069, 0.88120785, 0.90075635,
-             0.9147152, 0.92376589, 0.92746348, 0.93017444, 0.93523973, 0.93869056,
-             0.94166159, 0.94527828, 0.95007654, 0.9631492, 0.96909816],
-            [0.50747916, 0.53380288, 0.59879481, 0.63002174, 0.65433224, 0.67529505,
-             0.69420045, 0.71190688, 0.72080513, 0.72966774, 0.74756376, 0.76578488,
-             0.7842986, 0.8123006, 0.85786185, 1.00233416, 1.04743931],
-            [0.31997249, 0.3602069, 0.45884401, 0.5231481, 0.57224959, 0.6139435,
-             0.65042426, 0.68224633, 0.69678184, 0.71047011, 0.73702799, 0.76101206,
-             0.78314017, 0.81376994, 0.85699332, 0.96428156, 0.99027185],
-            [0.31916794, 0.38611869, 0.55029902, 0.65804212, 0.73519261, 0.79609015,
-             0.84480401, 0.88139352, 0.89594957, 0.90781971, 0.92918228, 0.94297737,
-             0.95193377, 0.9588552, 0.95571666, 0.88390919, 0.84849594],
+        hand_picked_shapes_pc = np.array([
+            [-0.39793837, -0.07590686],
+            [0.35206163, -0.07590686],
+            [0.58206163, 0.17409314],
+            [0.00206163, 0.42409314]
         ])
-        for prfl in custom_cluster_profiles:
-            x_cluster = np.zeros((5, 3))
-            for i, v in enumerate([5, 10, 15, 20]):
-                v_prfl = prfl*v
-                x0 = np.array([
-                    np.amax(v_prfl),
-                    0,
-                    0
-                ])
-                x_cluster[i+1, :] = least_squares(fit_err, x0, args=(v_prfl, profile_shapes), bounds=((0, -np.inf, -np.inf), np.inf)).x
-            ax1.plot(x_cluster[:, 0], x_cluster[:, 1])
-            ax2.plot(x_cluster[:, 0], x_cluster[:, 2])
+    else:
+        hand_picked_shapes_pc = np.array([
+            [-0.42416149, -0.05207391],
+            [0.27583851, -0.02207391],
+            [-0.12416149, 0.20792609],
+            [-0.50416149, 0.11792609]
+        ])
 
+    # ax1 = plt.figure().gca()
+    # ax1.set_xlabel('Log profile [m/s]')
+    # ax1.set_ylabel('Scaling PC1 [m/s]')
+    # sns.kdeplot(x=x_sol[:, 0], y=x_sol[:, 1], bw_adjust=.6, cmap=truncate_colormap(plt.get_cmap("Blues"), 0.2, 1.))
+    # ax2 = plt.figure().gca()
+    # ax2.set_xlabel('Log profile [m/s]')
+    # ax2.set_ylabel('Scaling PC2 [m/s]')
+    # sns.kdeplot(x=x_sol[:, 0], y=x_sol[:, 2], bw_adjust=.6, cmap=truncate_colormap(plt.get_cmap("Blues"), 0.2, 1.))
+    # ax1.axvline(x_pc_plane, color='grey')
+    # ax2.axvline(x_pc_plane, color='grey')
+    # for i, pc_prfl in enumerate(hand_picked_shapes_pc):
+    #     ax1.plot(x_pc_plane, pc_prfl[0], 's')
+    #     ax2.plot(x_pc_plane, pc_prfl[1], 's')
+
+    # fig = plt.figure()
+    # ax = fig.add_subplot(projection='3d')
+    # subset = np.random.choice(x_sol.shape[0], x_sol.shape[0] // 10, replace=False)
+    # ax.scatter(x_sol[subset, 0], x_sol[subset, 1], x_sol[subset, 2], c=x_cluster[subset, 0], alpha=.02)
+    # ax.set_xlabel('Magnitude')
+
+    fig = plt.figure()
+    ax3d = fig.add_subplot(projection='3d')
+    ax3d.set_xlabel('$v_{log,200m}$ [m/s]')
+    ax3d.set_xlim([0, 30])
+    ax3d.set_ylabel('$k_{PC1}$ [-]')
+    ax3d.set_zlabel('$k_{PC2}$ [-]')
+
+    for prfl in hand_picked_shapes:
+        hand_picked_shape_lines = np.zeros((2, 3))
+        r = 25
+        v_prfl = prfl*r
+        x0 = np.array([
+            np.amax(v_prfl),
+            0,
+            0
+        ])
+        hand_picked_shape_lines[1, :] = least_squares(fit_err, x0, args=(v_prfl, shape_modes), bounds=((0, -np.inf, -np.inf), np.inf)).x
+        ax3d.plot(hand_picked_shape_lines[:, 0], hand_picked_shape_lines[:, 1], hand_picked_shape_lines[:, 2])
+    ax3d.plot([0, r], [0, 0], [0, 0], 'k')
+
+    n_bins = 6
+    bin_edges = np.linspace(0, 26, n_bins+1)
+    # for le, ue in zip(bin_edges[:-1], bin_edges[1:]):
+
+    n_total = x_sol.shape[0]
+    ax = plt.subplots(2, n_bins//2, sharex=True, sharey=True)[1].reshape(-1)
+
+    for i, (le, ue) in enumerate(zip(bin_edges[:-1], bin_edges[1:])):
+        mask = (x_sol[:, 0] >= le) & (x_sol[:, 0] < ue)
+        n_bin = np.sum(mask)
+        print("Percentage of points in bins: {:.1f}%".format(n_bin/n_total*100))
+        kernel = gaussian_kde(x_sol[mask, 1:].T)
+
+        x, y = np.mgrid[-20:20:50j, -10:10:50j]
+        positions = np.vstack([x.ravel(), y.ravel()])
+        z = np.reshape(kernel(positions).T, x.shape)*n_bin/n_total*100
+
+        print(np.amax(z))
+
+        clevels = np.array([0.03, 0.05, 0.1, 0.25, 0.5, 0.75, 1., 2.])*3/n_bins  #, 4., 6., 8.
+        print(clevels)
+
+
+        # ax = plt.figure().gca()
+        # cp = ax.contour(x, y, z, cmap=plt.cm.gist_earth_r)
+        # print(cp.cvalues)
+        # ax.clabel(cp, inline=True, fontsize=10)
+
+        # ax[0].imshow(np.rot90(z), cmap=plt.cm.gist_earth_r, extent=[-20, 20, -10, 10])
+        cset = ax[i].contour(x, y, z, clevels, cmap=truncate_colormap(plt.cm.gist_earth_r, 0.05, 1.), norm=colors.LogNorm())  #, (le+ue)/2, zdir='x'
+        ax[i].clabel(cset, inline=True, fontsize=10)
+        # sns.kdeplot(x=x_sol[:, 1], y=x_sol[:, 2], bw_adjust=.6, cmap=truncate_colormap(plt.get_cmap("Blues"), 0.2, 1.), ax=ax[2])
+
+        # clevels = np.array([1, 5, 10])/n_bins
+
+        ax3d.contour(z, x, y, clevels, offset=(le+ue)/2, zdir='x', cmap=truncate_colormap(plt.cm.gist_earth_r, 0.05, 1.), norm=colors.LogNorm())
 
 
 
@@ -183,6 +239,7 @@ def plot_results_pc2(loc='mmij'):
 
 if __name__ == '__main__':
     loc = 'mmc'
+    # assign_to_cluster(loc)
     # eval_loc(loc)
     plot_results(loc)
     # plot_distr_pc12()
