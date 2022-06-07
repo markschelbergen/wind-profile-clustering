@@ -71,7 +71,7 @@ def preprocess_data(data, remove_low_wind_samples=True, return_copy=True):
     data['wind_speed'] = (data['wind_speed_east']**2 + data['wind_speed_north']**2)**.5
     if remove_low_wind_samples:
         data = remove_lt_mean_wind_speed_value(data, 5.)
-    data = express_profiles_wrt_ref_vector(data)
+    # data = express_profiles_wrt_ref_vector(data)
     data = normalize_data(data)
 
     return data

@@ -4,32 +4,8 @@ import matplotlib.pyplot as plt
 from matplotlib import colors
 import seaborn as sns
 from scipy.stats import gaussian_kde
-
-
-def log_law_wind_profile2(z, z_0, v_ref, z_ref, ol):
-    beta = 6
-    gamma = 19.3
-
-    if ol < 0:
-        def psi(z, ol):
-            x = (1 - gamma*z/ol)**.25
-            psi = 2 * np.log((1+x)/2) + np.log((1+x**2)/2) - 2 * np.arctan(x) + np.pi/2
-            return psi
-        v = (np.log(z/z_0) - psi(z, ol))/(np.log(z_ref/z_0) - psi(z_ref, ol)) * v_ref
-    elif ol == 0:
-        v = np.log(z/z_0)/np.log(z_ref/z_0) * v_ref
-    else:
-        def psi(z, ol):
-            psi = - beta * z/ol
-            return psi
-        v = (np.log(z/z_0) - psi(z, ol))/(np.log(z_ref/z_0) - psi(z_ref, ol)) * v_ref
-    return v
-
-
-def fit_err(x, wind_speed, profile_shapes):
-    v_err = wind_speed - np.dot(x.reshape((1, -1)), profile_shapes)
-    v_err = v_err.reshape(-1)
-    return v_err
+from principal_component_analysis import add_inside_panel_labels
+from dimensionality_reduction import *
 
 
 def eval_loc(loc='mmij'):
@@ -113,23 +89,9 @@ def plot_results(loc='mmij'):
     else:
         rl = .0002
     pcs = np.load("pcs_{}.npy".format(loc))
+    pc_data = np.load("pc_data_{}.npy".format(loc))
     shape_modes = np.insert(pcs, 0, log_law_wind_profile2(altitudes, rl, 1, 200, 0), axis=0)
     x_pc_plane = log_law_wind_profile2(100, rl, 1, 600, 0)
-
-    if loc == 'mmc':
-        hand_picked_shapes_pc = np.array([
-            [-0.39793837, -0.07590686],
-            [0.35206163, -0.07590686],
-            [0.58206163, 0.17409314],
-            [0.00206163, 0.42409314]
-        ])
-    else:
-        hand_picked_shapes_pc = np.array([
-            [-0.42416149, -0.05207391],
-            [0.27583851, -0.02207391],
-            [-0.12416149, 0.20792609],
-            [-0.50416149, 0.11792609]
-        ])
 
     # ax1 = plt.figure().gca()
     # ax1.set_xlabel('Log profile [m/s]')
@@ -151,8 +113,10 @@ def plot_results(loc='mmij'):
     # ax.scatter(x_sol[subset, 0], x_sol[subset, 1], x_sol[subset, 2], c=x_cluster[subset, 0], alpha=.02)
     # ax.set_xlabel('Magnitude')
 
-    fig = plt.figure()
-    ax3d = fig.add_subplot(projection='3d')
+    fig = plt.figure(figsize=[8, 8])
+    plt.subplots_adjust(top=1.04, bottom=.065, wspace=0.12, hspace=.08, left=.07, right=.97)
+    spec = fig.add_gridspec(ncols=3, nrows=3, height_ratios=[4, 1, 1])
+    ax3d = fig.add_subplot(spec[0, :], projection='3d')
     ax3d.set_xlabel('$v_{log,200m}$ [m/s]')
     ax3d.set_xlim([0, 30])
     ax3d.set_ylabel('$k_{PC1}$ [-]')
@@ -176,8 +140,13 @@ def plot_results(loc='mmij'):
     # for le, ue in zip(bin_edges[:-1], bin_edges[1:]):
 
     n_total = x_sol.shape[0]
-    ax = plt.subplots(2, n_bins//2, sharex=True, sharey=True)[1].reshape(-1)
+    # ax = plt.subplots(2, n_bins//2, sharex=True, sharey=True)[1].reshape(-1)
+    # ax[0].set_xlim([-14, 20])
+    # ax[0].set_ylim([-2.5, 8])
+    # ax2 = plt.subplots(2, n_bins//2, sharex=True, sharey=True)[1].reshape(-1)
+    # ax3 = plt.subplots(2, n_bins//2, sharex=True, sharey=True)[1].reshape(-1)
 
+    ax = []
     for i, (le, ue) in enumerate(zip(bin_edges[:-1], bin_edges[1:])):
         mask = (x_sol[:, 0] >= le) & (x_sol[:, 0] < ue)
         n_bin = np.sum(mask)
@@ -200,15 +169,38 @@ def plot_results(loc='mmij'):
         # ax.clabel(cp, inline=True, fontsize=10)
 
         # ax[0].imshow(np.rot90(z), cmap=plt.cm.gist_earth_r, extent=[-20, 20, -10, 10])
-        cset = ax[i].contour(x, y, z, clevels, cmap=truncate_colormap(plt.cm.gist_earth_r, 0.05, 1.), norm=colors.LogNorm())  #, (le+ue)/2, zdir='x'
-        ax[i].clabel(cset, inline=True, fontsize=10)
+
+        a = fig.add_subplot(spec[1+i//3, i % 3])
+        if i % 3 != 0:
+            a.set_yticklabels([])
+        else:
+            a.set_ylabel('$k_{PC2}$ [-]')
+        if i // 3 == 0:
+            a.set_xticklabels([])
+        else:
+            a.set_xlabel('$k_{PC1}$ [-]')
+        cset = a.contour(x, y, z, clevels, cmap=truncate_colormap(plt.cm.gist_earth_r, 0.05, 1.), norm=colors.LogNorm())  #, (le+ue)/2, zdir='x'
+        a.text(.2, .75, '{:.1f} - {:.1f} m/s\n{:.1f}%'.format(le, ue, n_bin / n_total * 100), transform=a.transAxes)
+        a.grid()
+        a.clabel(cset, inline=True, fontsize=10)
+        ax.append(a)
         # sns.kdeplot(x=x_sol[:, 1], y=x_sol[:, 2], bw_adjust=.6, cmap=truncate_colormap(plt.get_cmap("Blues"), 0.2, 1.), ax=ax[2])
 
         # clevels = np.array([1, 5, 10])/n_bins
 
         ax3d.contour(z, x, y, clevels, offset=(le+ue)/2, zdir='x', cmap=truncate_colormap(plt.cm.gist_earth_r, 0.05, 1.), norm=colors.LogNorm())
 
+        # plot_frequency_projection(pc_data[mask, 0], pc_data[mask, 1], ax=ax2[i])
+        # ax2[i].text(.2, .8, '{:.1f}%'.format(n_bin/n_total*100), transform=ax2[i].transAxes)
+        # plot_frequency_projection(pc_data[mask, 0], pc_data[mask, 1], ax=ax3[i], kde_plot=True)
+        # ax3[i].text(.2, .8, '{:.1f}%'.format(n_bin/n_total*100), transform=ax3[i].transAxes)
 
+    ax[0].get_shared_y_axes().join(*ax)
+    ax[0].set_xlim([-14, 20])
+    ax[0].set_ylim([-2.5, 8])
+
+    ax.insert(0, ax3d)
+    add_inside_panel_labels(np.array(ax))
 
 def plot_distr_pc12(loc='mmij'):
     x_sol = np.load("x_sol_{}.npy".format(loc))

@@ -3,7 +3,7 @@ from itertools import accumulate
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.colors import ListedColormap, LogNorm
-from wind_resource_fit import log_law_wind_profile2, fit_err
+from dimensionality_reduction import *
 from scipy.optimize import least_squares
 from scipy.interpolate import interp1d, Rbf, UnivariateSpline, Akima1DInterpolator
 from scipy.signal import savgol_filter
@@ -20,7 +20,10 @@ def add_inside_panel_labels(ax, y=None):
         y = [.85]*ax.shape[0]
     for i, a in enumerate(ax):
         label = '('+string.ascii_lowercase[i]+')'
-        a.text(.05, y[i], label, transform=a.transAxes, fontsize='large')  #, fontweight='bold', va='top', ha='right')
+        try:
+            a.text(.05, y[i], label, transform=a.transAxes, fontsize='large')  #, fontweight='bold', va='top', ha='right')
+        except:
+            a.text(-10, -25, 0, label, fontsize='large')
 
 
 def plot_mean_and_pc_profiles(altitudes, var, get_profile, rl=.1):
@@ -91,8 +94,8 @@ def plot_frequency_projection(x, y, labels=['PC1', 'PC2'], kde_plot=False, ax=No
         import seaborn as sns
         sns.kdeplot(x=x, y=y, ax=ax)  #, bw_adjust=.6) # levels=lvls, cmap=cmap_grey, ax=ax_col[0])
 
-    # plt.xlim(xlim_pc12)
-    # plt.ylim(ylim_pc12)
+    ax.set_xlim([-1, 2])
+    ax.set_ylim([-.25, .8])
     ax.grid(True)
     ax.set_xlabel(labels[0])
     ax.set_ylabel(labels[1])
@@ -232,12 +235,22 @@ def plot_pca_results(wind_data, pipeline, loc, pcs, transform_pcs=True):
     plot_mean_and_pc_profiles(altitudes, var, get_pc_profile)
 
     if loc == 'mmc':
+        # hand_picked_shapes_pc = np.array([
+        #     [-.6, .27],
+        #     [.15, .27],
+        #     [.38, .02],
+        #     [-.2, -.23]
+        # ])
         hand_picked_shapes_pc = np.array([
-            [-.6, .27],
-            [.15, .27],
-            [.38, .02],
-            [-.2, -.23]
+            [-.4, -.08],
+            [-.13, .47],
+            [.35, .32],
+            [.7, .1],
+            # [.65, .15],
+            # [.5, .005]
         ])
+        hand_picked_shapes_pc = hand_picked_shapes_pc+pc_logn[0, :2]
+        hand_picked_shapes_pc[:, 1] = -hand_picked_shapes_pc[:, 1]
     else:
         hand_picked_shapes_pc = np.array([
             [-.3, -.11],
@@ -266,11 +279,9 @@ def plot_pca_results(wind_data, pipeline, loc, pcs, transform_pcs=True):
     plot_hand_picked_shapes(hand_picked_shapes, wind_data['altitude'], labels=hand_picked_shapes_pc-pc_logn[0, :2])
     print(wind_data['altitude'], hand_picked_shapes)
 
-    ax_2dhist.set_xlim([-1, 2])
-    ax_2dhist.set_ylim([-.25, .8])
     ax_2dhist.legend(bbox_to_anchor=(0.05, 1.05, .9, 0.2), loc="lower left", mode="expand", borderaxespad=0, ncol=2)
 
-    return ax_2dhist
+    return ax_2dhist, pc_logn
 
 
 def plot_hand_picked_shapes(profiles, altitudes, labels=None):
@@ -296,17 +307,26 @@ def plot_hand_picked_shapes(profiles, altitudes, labels=None):
     plt.legend()
 
 
-def eval_loc(loc='mmc'):
+def eval_loc(loc='mmc', transform_pcs=True):
     from read_data.dowa import read_data
     from preprocess_data import preprocess_data
     wind_data = read_data({'name': loc})
-    wind_data = preprocess_data(wind_data)
+    wind_data_red = preprocess_data(wind_data)
+    wind_data_full = preprocess_data(wind_data, False)
 
-    pipeline, pcs = run_pca(wind_data['training_data'], wind_data['altitude'])
+    pipeline, pcs = run_pca(wind_data_red['training_data'], wind_data_red['altitude'])
     if loc == 'mmc':
         pcs[1, :] = -pcs[1, :]
     np.save("pcs_{}.npy".format(loc), pcs)
-    ax = plot_pca_results(wind_data, pipeline, loc, pcs)
+
+    ax, pc_logn = plot_pca_results(wind_data_red, pipeline, loc, pcs)
+
+    data_pc = pipeline.transform(wind_data_full['training_data'])
+    if transform_pcs:
+        if loc == 'mmc':
+            data_pc[:, 1] = -data_pc[:, 1]
+        data_pc = data_pc - pc_logn
+    np.save('pc_data_{}.npy'.format(loc), data_pc)
 
 
 if __name__ == '__main__':
