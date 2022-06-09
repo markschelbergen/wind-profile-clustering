@@ -245,7 +245,7 @@ def plot_pca_results(wind_data, pipeline, loc, pcs, transform_pcs=True):
             [-.4, -.08],
             [-.13, .47],
             [.35, .32],
-            [.7, .1],
+            [.65, .1],
             # [.65, .15],
             # [.5, .005]
         ])
@@ -267,16 +267,16 @@ def plot_pca_results(wind_data, pipeline, loc, pcs, transform_pcs=True):
             if loc == 'mmc':
                 pc_prfl[1] = -pc_prfl[1]
             pc_prfl = pc_prfl - pc_logn[0, :2]
-        ax_2dhist.plot(*pc_prfl, '*', ms=8, mfc='None', color='C1')
+        ax_2dhist.plot(*pc_prfl, '*', ms=8, mfc='None', color='C{}'.format(i))
 
         # x = least_squares(fit_err, [1, 0, 0], args=(hand_picked_shapes[i, :], shape_modes), bounds=((0, -np.inf, -np.inf), np.inf)).x
         # ax_2dhist.plot(*x[1:], 'x', mfc='None', color='C2')
-    ax_2dhist.plot(0, 0, '*', ms=8, mfc='None', color='C1', label='Hand-picked shapes')
+    ax_2dhist.plot(0, 0, '*', ms=8, mfc='None', color='k', label='Hand-picked shapes')
     print(pc_logn[0, :2])
     ax_2dhist.plot(*-pc_logn[0, :2], 'o', color='k', ms=5, mfc='None', label='Mean')
 
     np.save("hand_picked_shapes_{}.npy".format(loc), hand_picked_shapes)
-    plot_hand_picked_shapes(hand_picked_shapes, wind_data['altitude'], labels=hand_picked_shapes_pc-pc_logn[0, :2])
+    plot_hand_picked_shapes(hand_picked_shapes, wind_data['altitude'], rl, labels=hand_picked_shapes_pc-pc_logn[0, :2])
     print(wind_data['altitude'], hand_picked_shapes)
 
     ax_2dhist.legend(bbox_to_anchor=(0.05, 1.05, .9, 0.2), loc="lower left", mode="expand", borderaxespad=0, ncol=2)
@@ -284,20 +284,22 @@ def plot_pca_results(wind_data, pipeline, loc, pcs, transform_pcs=True):
     return ax_2dhist, pc_logn
 
 
-def plot_hand_picked_shapes(profiles, altitudes, labels=None):
+def plot_hand_picked_shapes(profiles, altitudes, roughness_length, labels=None):
     figsize = (3, 3)
     plt.figure(figsize=figsize)
     plt.subplots_adjust(top=0.95, bottom=0.155, left=0.2, right=0.97, hspace=0.2, wspace=0.2)
+    alts = np.linspace(0, altitudes[-1], 100)
     for i, v in enumerate(profiles):
         lbl = '({:.2f}, {:.2f})'.format(*labels[i, :])
         # plt.plot(v, altitudes, '*', label=lbl, color='C{}'.format(i))
-        # alts = np.linspace(altitudes[0], altitudes[-1], 1000)
+        # alts2 = np.linspace(altitudes[0], altitudes[-1], 1000)
         # f = interp1d(np.insert(altitudes[4:], 0, 0), np.insert(v[4:], 0, 0), kind='quadratic', fill_value='extrapolate')
-        # plt.plot(f(alts), alts, color='C{}'.format(i))
+        # plt.plot(f(alts2), alts2, color='C{}'.format(i))
 
-        alts = np.linspace(0, altitudes[-1], 100)
         f = Akima1DInterpolator(np.insert(altitudes[1:], 0, 0), np.insert(v[1:], 0, 0))
         plt.plot(f(alts), alts, color='C{}'.format(i), label=lbl)
+    alts[0] = 1e-3
+    plt.plot(log_law_wind_profile2(alts, roughness_length, 1., altitudes[-1], 0.), alts, color='k', label='Log')
 
     plt.xlim([0, 1.2])
     plt.ylim([0, 600])
