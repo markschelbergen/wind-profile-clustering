@@ -30,7 +30,7 @@ def get_dataframe(loc, year=None):
 
 
 if __name__ == '__main__':
-    loc = 'mmij'
+    loc = 'mmca'
     y = 2008
     df = get_dataframe(loc, year=y)
     print(df.shape[0])

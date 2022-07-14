@@ -57,7 +57,7 @@ if __name__ == '__main__':
     from wind_profile_clustering import cluster_normalized_wind_profiles_pca, predict_cluster
     from preprocess_data import preprocess_data
 
-    data = read_data({'name': 'mmc'})
+    data = read_data({'name': 'mmca'})
     processed_data = preprocess_data(data)
     n_clusters = 8
     res = cluster_normalized_wind_profiles_pca(processed_data['training_data'], n_clusters)

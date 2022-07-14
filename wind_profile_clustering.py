@@ -323,10 +323,10 @@ if __name__ == '__main__':
     data = read_data({'name': loc})
     from preprocess_data import preprocess_data
     processed_data = preprocess_data(data)
-    n_clusters = 8
-    res = cluster_normalized_wind_profiles_pca(processed_data['training_data'], n_clusters, n_pcs=2)
+    n_clusters = 5
+    res = cluster_normalized_wind_profiles_pca(processed_data['training_data'], n_clusters, n_pcs=5)
     plot_wind_profile_shapes(processed_data['altitude'], res['clusters_feature'])
-    visualise_patterns(n_clusters, processed_data, res['sample_labels'], res['frequency_clusters'])
+    # visualise_patterns(n_clusters, processed_data, res['sample_labels'], res['frequency_clusters'])
 
     fig, ax = plt.subplots(2, 2, figsize=[10, 10])
     projection_plot_of_clusters(res['training_data_pc'][:, 0], res['training_data_pc'][:, 1], res['sample_labels'], res['clusters_pc'], ax=ax[1, 0])
