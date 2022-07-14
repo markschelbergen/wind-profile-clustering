@@ -273,10 +273,8 @@ def plot_cluster_frequency(loc='mmca', clusters='', year=None, plot=False):
     print("No. of hourly samples {}".format(n_samples))
     j_200m = np.argmax(wind_data['altitude'] == 200)
 
-    n_bins = 50
+    n_bins = 30
     vw_200m_bin_edges = np.linspace(0, 30, n_bins + 1)
-    vw_200m_bin_centers = (vw_200m_bin_edges[1:] + vw_200m_bin_edges[:-1]) / 2
-
     # density_vw200m = np.histogram(wind_speed[:, j_200m], vw_200m_bin_edges, density=True)[0]
     # np.save('density_vw200m.npy', density_vw200m)
 
@@ -352,6 +350,7 @@ def plot_cluster_frequency(loc='mmca', clusters='', year=None, plot=False):
                 a.set_xlabel(r'$v_{\rm w,200m}$ [m/s]')
                 a.xaxis.set_visible(True)
         
+        vw_200m_bin_centers = (vw_200m_bin_edges[1:] + vw_200m_bin_edges[:-1])/2
         bin_power = np.interp(vw_200m_bin_centers, df['vw200'], df['mcp'], left=0., right=0.)
 
         p_avg_bin = np.sum(bin_freq * bin_power / n_samples)
@@ -439,7 +438,7 @@ def aep_convergence(loc='mmij'):
 
 
 if __name__ == '__main__':
-    loc = 'mmij'
+    loc = 'mmca'
     aep_convergence(loc)
     # assign_to_cluster(loc, include_shapes=[0, 1, 2, 4, 5, 6])
     # plot_cluster_frequency(loc, plot=True)
