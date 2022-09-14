@@ -275,6 +275,7 @@ def plot_cluster_frequency(loc='mmca', clusters='', year=None, plot=False):
 
     n_bins = 30
     vw_200m_bin_edges = np.linspace(0, 30, n_bins + 1)
+    vw_200m_bin_centers = (vw_200m_bin_edges[1:] + vw_200m_bin_edges[:-1]) / 2
     # density_vw200m = np.histogram(wind_speed[:, j_200m], vw_200m_bin_edges, density=True)[0]
     # np.save('density_vw200m.npy', density_vw200m)
 
@@ -295,11 +296,11 @@ def plot_cluster_frequency(loc='mmca', clusters='', year=None, plot=False):
         ax0 = plt.subplot(411)
         ax0.set_xlim([0, 27.5])
 
-        n = ax0.hist(wind_speed[:, j_200m], vw_200m_bin_edges, alpha=.2, weights=[100/np.sum(wind_speed.shape[0])]*np.sum(wind_speed.shape[0]))[0]
+        n = ax0.hist(wind_speed[:, j_200m], vw_200m_bin_edges, alpha=.2, weights=[100/wind_speed.shape[0]]*wind_speed.shape[0])[0]
         ax0.plot(vw_200m_bin_centers, n, color='C0', label='Wind atlas')
-        n = ax0.hist(x_cluster[:, 1], vw_200m_bin_edges, alpha=.2, weights=[100/np.sum(wind_speed.shape[0])]*np.sum(wind_speed.shape[0]))[0]
+        n = ax0.hist(x_cluster[:, 1], vw_200m_bin_edges, alpha=.2, weights=[100/wind_speed.shape[0]]*wind_speed.shape[0])[0]
         ax0.plot(vw_200m_bin_centers, n, color='C1', label='Aggregate of clusters')
-        n = ax0.hist(x_cluster_log[:, 1], vw_200m_bin_edges, alpha=.2, weights=[100/np.sum(wind_speed.shape[0])]*np.sum(wind_speed.shape[0]))[0]
+        n = ax0.hist(x_cluster_log[:, 1], vw_200m_bin_edges, alpha=.2, weights=[100/wind_speed.shape[0]]*wind_speed.shape[0])[0]
         ax0.plot(vw_200m_bin_centers, n, color='C2', label='Log fit')
         ax0.set_ylabel('Bin frequency [%]')
         ax0.legend()
@@ -312,16 +313,17 @@ def plot_cluster_frequency(loc='mmca', clusters='', year=None, plot=False):
     for i in range(n_clusters):
         df = pd.read_csv('opt_res_{}/opt_res_{}{}.csv'.format(loc, loc, i+1))
         vw_200m_bin_edges = np.linspace(df['vw200'].iloc[0], df['vw200'].iloc[-1], n_bins+1)
+        vw_200m_bin_centers = (vw_200m_bin_edges[1:] + vw_200m_bin_edges[:-1])/2
         mask = x_cluster[:, 0] == i
         bin_freq = np.histogram(x_cluster[mask, 1], vw_200m_bin_edges)[0]
         
         if plot:
             ax = plt.subplot(4, 2, i + 3)
             ax.xaxis.set_visible(False)
-            ax.set_ylim([0, 10])
+            ax.set_ylim([0, 2])
             ax.set_xlim([0, 27.5])
 
-            ax.hist(x_cluster[mask, 1], vw_200m_bin_edges, alpha=.5, weights=[100/np.sum(mask)]*np.sum(mask))
+            ax.hist(x_cluster[mask, 1], vw_200m_bin_edges, alpha=.5, weights=[100/wind_speed.shape[0]]*np.sum(mask))
             ax.axvline(df['vw200'].iloc[0], ls='--', color='grey')
             ax.axvline(df['vw200'].iloc[-1], ls='--', color='grey')
 
@@ -330,9 +332,9 @@ def plot_cluster_frequency(loc='mmca', clusters='', year=None, plot=False):
 
             width_bin = (df['vw200'].iloc[-1]-df['vw200'].iloc[0])/n_bins
             vw_200m_bin_edges_below = np.arange(df['vw200'].iloc[0], 0, -width_bin)[::-1]
-            ax.hist(x_cluster[mask, 1], vw_200m_bin_edges_below, color='C1', alpha=.5, weights=[100/np.sum(mask)]*np.sum(mask))
+            ax.hist(x_cluster[mask, 1], vw_200m_bin_edges_below, color='C1', alpha=.5, weights=[100/wind_speed.shape[0]]*np.sum(mask))
             vw_200m_bin_edges_above = np.arange(df['vw200'].iloc[-1], np.amax(x_cluster[mask, 1]), width_bin)
-            ax.hist(x_cluster[mask, 1], vw_200m_bin_edges_above, color='C1', alpha=.5, weights=[100/np.sum(mask)]*np.sum(mask))
+            ax.hist(x_cluster[mask, 1], vw_200m_bin_edges_above, color='C1', alpha=.5, weights=[100/wind_speed.shape[0]]*np.sum(mask))
             ax.text(0.03, 0.7, cluster_labels[i]+'\n{:.1f}%'.format(sum(mask)/x_cluster.shape[0]*100), transform=ax.transAxes)
             axt = ax.twinx()
             if i % 2 == 0:
@@ -350,7 +352,6 @@ def plot_cluster_frequency(loc='mmca', clusters='', year=None, plot=False):
                 a.set_xlabel(r'$v_{\rm w,200m}$ [m/s]')
                 a.xaxis.set_visible(True)
         
-        vw_200m_bin_centers = (vw_200m_bin_edges[1:] + vw_200m_bin_edges[:-1])/2
         bin_power = np.interp(vw_200m_bin_centers, df['vw200'], df['mcp'], left=0., right=0.)
 
         p_avg_bin = np.sum(bin_freq * bin_power / n_samples)
@@ -397,32 +398,36 @@ def plot_results_pc2(loc='mmij'):
     # plt.ylim([-5, 8])
 
 
-def aep_convergence(loc='mmij'):
+def aep_convergence(loc='mmij', ax=None):
     if loc == 'mmca':
-        cluster_combinations = ['0', '012', '03', '034', '0134', '01345', '']
+        cluster_combinations = ['0', '03', '0123', '01234', '']  #['0', '012', '03', '034', '0134', '01345', '']
     else:
-        cluster_combinations = ['0', '01', '012', '0123', '0125', '01245', '012456', '']
+        cluster_combinations = ['0', '0123', '01235', '012345', '']
     n_combs = len(cluster_combinations)
-    p_avg_convergence = []
-    p_avg_convergence2008 = []
-    p_avg_convergence2009 = []
-    p_avg_convergence2010 = []
-    for clstr_combi in cluster_combinations:
+    p_avg_convergence = np.zeros((11, n_combs))
+    for i, clstr_combi in enumerate(cluster_combinations):
         p_avg = plot_cluster_frequency(loc, clstr_combi)
-        p_avg_convergence.append(p_avg)
-        p_avg = plot_cluster_frequency(loc, clstr_combi, 2008)
-        p_avg_convergence2008.append(p_avg)
-        p_avg = plot_cluster_frequency(loc, clstr_combi, 2009)
-        p_avg_convergence2009.append(p_avg)
-        p_avg = plot_cluster_frequency(loc, clstr_combi, 2010)
-        p_avg_convergence2010.append(p_avg)
+        p_avg_convergence[0, i] = p_avg
+        for j, y in enumerate(range(2008, 2018)):
+            p_avg = plot_cluster_frequency(loc, clstr_combi, y)
+            p_avg_convergence[j+1, i] = p_avg
 
-    plt.figure()
-    plt.plot(range(n_combs), p_avg_convergence, 's-', label='2008-2018')
-    plt.plot(range(n_combs), p_avg_convergence2008, 's-', label='2008')
-    plt.plot(range(n_combs), p_avg_convergence2009, 's-', label='2009')
-    plt.plot(range(n_combs), p_avg_convergence2010, 's-', label='2010')
-    plt.legend()
+    if ax is None:
+        add_legend = True
+        ax = plt.figure().gca()
+    else:
+        add_legend = False
+    ax.plot(p_avg_convergence[0, :]*1e-3, 's-', label='2008-2017', ms=3)
+    for j, y in enumerate(range(2008, 2018)):
+        if y == 2008:
+            alpha = 1
+            ls = '.-'
+        else:
+            alpha = .5
+            ls = '-'
+        ax.plot(p_avg_convergence[j+1, :]*1e-3, ls, label=y, alpha=alpha)
+    ax.set_xticks(range(n_combs))
+    ax.set_xticklabels(['Log', 'Set #1', 'Set #2', 'Set #3', 'All'], fontdict={'fontsize': 'small'})
 
     loc = loc
     li_s = []
@@ -433,19 +438,44 @@ def aep_convergence(loc='mmij'):
     s = pd.read_csv('opt_res_{}/succeeded_att2.csv'.format(loc))
     li_s.append(s)
     succeeded = pd.concat(li_s, axis=0, ignore_index=True)
-    plt.axhline(succeeded['mcp'].sum()/8784, ls='--', color='C1')
+    ax.axhline(succeeded['mcp'].sum()/8784*1e-3, ls='--', color='C1')
+    ax.set_xlabel('Wind profile shapes')
 
+    if add_legend:
+        ax.legend()
+
+    plt.figure()
+    steps = (p_avg_convergence[:, 1:] - p_avg_convergence[:, :-1])/p_avg_convergence[:, 1:] * 100
+    plt.plot(steps.T)
+
+
+def plot_aep():
+    fig, ax = plt.subplots(1, 2, sharex=True, sharey=True, figsize=[7, 4])
+    wspace = .2
+    plt.subplots_adjust(left=.115, bottom=.121, right=.983, top=.75, hspace=.274, wspace=wspace)
+
+    for j, loc in enumerate(['mmca', 'mmij']):
+        aep_convergence(loc, ax[j])
+
+    ax[0].legend(bbox_to_anchor=(.3, 1.13, 1.6, .2), loc="lower left", mode="expand", borderaxespad=0, ncol=4)
+    ax[0].set_ylabel('Average power [kW]')
+    ax[0].set_title('Onshore')
+    ax[1].set_title('Offshore')
+    for a in ax.reshape(-1):
+        a.grid()
+        a.set_ylim([3, 7.5])
+    add_panel_labels(ax, [.29, .13])
 
 
 if __name__ == '__main__':
     loc = 'mmca'
-    aep_convergence(loc)
-    # assign_to_cluster(loc, include_shapes=[0, 1, 2, 4, 5, 6])
+    plot_aep()
+    # assign_to_cluster(loc, include_shapes=[0, 1, 2, 3, 4, 5])
     # plot_cluster_frequency(loc, plot=True)
     # plot_cluster_frequency(loc, '0')
     # plot_cluster_frequency(loc, '012')
 
-    # eval_loc(loc)
+    eval_loc(loc)
     # plot_3d_results(loc)
     # plot_distr_pc12()
     # plot_results_pc1(loc)
