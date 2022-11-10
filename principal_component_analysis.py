@@ -131,7 +131,7 @@ def run_pca(training_data, altitudes):
 
 def plot_pca_results(wind_data, pipeline, loc, pcs, transform_pcs=True):
     if loc == 'mmca':
-        rl = .1
+        rl = .03
     else:
         rl = .0002
     print("Roughness length {}".format(rl))
@@ -173,15 +173,17 @@ def plot_pca_results(wind_data, pipeline, loc, pcs, transform_pcs=True):
     var = pipeline.explained_variance_
     ax_2dhist = plot_frequency_projection(data_pc[:, 0], data_pc[:, 1])
 
-    obukhov_lengths_inv_mark = []  #1/np.array([-100, -350, 1e10, 350, 100])
-    obukhov_lengths_inv = 1/np.array([-100, -350, -3e3, 1e10, 5e3, 2e3, 1e3, 700, 500, 350, 200, 100])
+    obukhov_lengths_inv_mark = 1/np.array([-350, 2000, 600])  #1/np.array([-100, -350, 1e10, 350, 100])
+    obukhov_lengths_inv = 1/np.array([-100, -350, -3e3, 1e10, 5e3, 2e3, 1e3, 700, 600, 500, 350, 200, 100])
     if rl == .1:
         obukhov_lengths_inv[0] = -1
     pc1_log, pc2_log = [], []
     # pc1_log_alt, pc2_log_alt = [], []
 
-    if obukhov_lengths_inv_mark:
-        ax_prfl = plt.figure().gca()
+    if len(obukhov_lengths_inv_mark) > 0:
+        ax_prfl = plt.subplots(1, 2, sharey=True)[1]
+    else:
+        ax_prfl = None
     for i, oli in enumerate(obukhov_lengths_inv):
         ol = 1/oli
         if ol == 1e10:
@@ -205,15 +207,16 @@ def plot_pca_results(wind_data, pipeline, loc, pcs, transform_pcs=True):
         pc1_log.append(pc_logt[0, 0])
         pc2_log.append(pc_logt[0, 1])
         if oli in obukhov_lengths_inv_mark:
-            ax_2dhist.plot(*pc_logt[0, :2], '.', color='C0', ms=8)
+            ax_2dhist.plot(*pc_logt[0, :2], '.', color='C{}'.format(i), ms=8)
 
-            ax_prfl.plot(v_log, altitudes, color='C{}'.format(i), label='OL={:.1e} PCs=[{:.1f}, {:.1f}, {:.2f}]'.format(ol, *pc_log[0, :3]))
-            pcn = 3
+            ax_prfl[0].plot(v_log, altitudes, color='C{}'.format(i), label='OL={:.1e} PCs=[{:.1f}, {:.1f}, {:.2f}]'.format(ol, *pc_log[0, :3]))
+            dv_dh = (v_log[1:]-v_log[:-1])/(altitudes[1:]-altitudes[:-1])
+            ax_prfl[1].plot(dv_dh, altitudes[:-1], color='C{}'.format(i), label='OL={:.1e} PCs=[{:.1f}, {:.1f}, {:.2f}]'.format(ol, *pc_log[0, :3]))
+            pcn = 2
             v_log_pc1n = pipeline.inverse_transform(np.pad(pc_log[0, :pcn], (0, n_features - pcn)))
-            ax_prfl.plot(v_log_pc1n, altitudes, '--', color='C{}'.format(i))
+            ax_prfl[0].plot(v_log_pc1n, altitudes, '--', color='C{}'.format(i))
             # ax_prfl.plot(pc_log_alt@shape_modes, altitudes, ':', color='C{}'.format(i))
-    if obukhov_lengths_inv_mark:
-        ax_prfl.legend()
+            ax_prfl[0].legend()
     ax_2dhist.plot(pc1_log, pc2_log, '-', color='salmon', linewidth=1, label='Logarithmic profiles')
     # ax_2dhist.plot(pc1_log_alt, pc2_log_alt, '-', color='C2')
     if not transform_pcs:
@@ -277,7 +280,7 @@ def plot_pca_results(wind_data, pipeline, loc, pcs, transform_pcs=True):
 
     ax_2dhist.legend(bbox_to_anchor=(0.05, 1.05, .9, 0.2), loc="lower left", mode="expand", borderaxespad=0, ncol=2)
 
-    return ax_2dhist, pc_logn
+    return ax_2dhist, pc_logn, ax_prfl
 
 
 def plot_wind_profile_shapes(profiles, altitudes, roughness_length, labels=None, colors=None, ax=None, scale_wrt_200m=False):
@@ -336,7 +339,7 @@ def eval_loc(loc='mmca', transform_pcs=True, ax_profiles=None):
         pcs[1, :] = -pcs[1, :]
     np.save("pcs_{}.npy".format(loc), pcs)
 
-    ax, pc_logn = plot_pca_results(wind_data_red, pipeline, loc, pcs, transform_pcs)
+    ax, pc_logn, ax_prfl = plot_pca_results(wind_data_red, pipeline, loc, pcs, transform_pcs)
 
     data_pc = pipeline.transform(wind_data_full['training_data'])
     if transform_pcs:
@@ -351,39 +354,52 @@ def eval_loc(loc='mmca', transform_pcs=True, ax_profiles=None):
             data_pc[:, 1] = -data_pc[:, 1]
         data_pc = data_pc - pc_logn
     if loc == 'mmij':
-        allocate_clusters_mmij(data_pc, pipeline, ax, wind_data['altitude'], pc_logn[0, :2], ax_profiles)
+        cluster_mean_profiles, cmp_pcs = allocate_clusters_mmij(data_pc, pipeline, ax, wind_data['altitude'], pc_logn[0, :2], ax_profiles)
     else:
-        allocate_clusters_mmca(data_pc, pipeline, ax, wind_data['altitude'], pc_logn[0, :2], ax_profiles)
+        cluster_mean_profiles, cmp_pcs = allocate_clusters_mmca(data_pc, pipeline, ax, wind_data['altitude'], pc_logn[0, :2], ax_profiles)
+    print("Mean cluster profiles PCs:", cmp_pcs[:, :3])
+    for i in range(4):
+        lbl = 'PCs=[{:.1f}, {:.1f}, {:.2f}]'.format(*cmp_pcs[i, :3])
+        ax_prfl[0].plot(cluster_mean_profiles[i, :], wind_data['altitude'], label=lbl)
+        ax_prfl[0].legend()
+        dv_dh = (cluster_mean_profiles[i, 1:] - cluster_mean_profiles[i, :-1]) / \
+                (wind_data['altitude'][1:] - wind_data['altitude'][:-1])
+        ax_prfl[1].plot(dv_dh, wind_data['altitude'][:-1], '-.')
+
 
 
 def allocate_clusters_mmca(data_pc, pipeline, ax, altitudes, pc_logn, ax_profiles=None):
     rl = .1
     from matplotlib.patches import Polygon, Path
-    cluster0 = np.array([[-.733, -.185],
-                         [.173, -.185],
-                         [.173, 0],
-                         [-.733, 0]])
+    cluster0 = np.array([[-0.63509316, -0.13777923],
+                         [0, -0.13777923],
+                         [0,  0.05],
+                         [-0.63509316,  0.05]])
     cluster1 = np.array([cluster0[1, :],
-                         [cluster0[1, 0], -.05],
-                         [1.3, 0.0],
-                         [1.3, cluster0[1, 1]]])
-    cluster2 = np.array([cluster1[1, :],
+                         [cluster0[1, 0], 0],
+                         [.6, 0.05/1.4*.6],
+                         [.6, cluster0[1, 1]]])
+    cluster2 = np.array([cluster1[3, :],
+                         cluster1[2, :],
+                         [1.4, 0.05],
+                         [1.4, cluster1[3, 1]]])
+    cluster3 = np.array([cluster1[1, :],
                          cluster0[2, :],
-                         [1.3, .4],
-                         cluster1[2, :]])
-    cluster3 = np.array([cluster0[2, :],
-                       [-.055, .147],
-                       [.5, .8],
-                       cluster2[2, :]])
-    cluster4 = np.array([cluster3[1, :],
-                         [-.55, cluster3[1, 1]],
-                         [-.55, .8],
+                         [cluster2[2, 0], 0.44722077],
+                         cluster2[2, :]])
+    cluster4 = np.array([cluster0[2, :],
+                         [0, 0.19422077],
+                         [0.59790684, 0.84722077],
                          cluster3[2, :]])
+    cluster5 = np.array([cluster4[1, :],
+                         [-0.45209316, cluster4[1, 1]],
+                         [-0.45209316, 0.84722077],
+                         cluster4[2, :]])
 
     mean_profiles_pc = []
     mean_profiles = []
     frequency = []
-    for i, corners in enumerate([cluster0, cluster1, cluster2, cluster3, cluster4]):
+    for i, corners in enumerate([cluster0, cluster1, cluster2, cluster3, cluster4, cluster5]):
         corners = corners
         path = Path(corners)
         mask = path.contains_points(data_pc[:, :2])
@@ -394,7 +410,8 @@ def allocate_clusters_mmca(data_pc, pipeline, ax, altitudes, pc_logn, ax_profile
             lbl = 'Cluster mean'
         else:
             lbl = None
-        ax.plot(*mean_prfl_pc[:2], '*', ms=8, mfc='None', color='C{}'.format(i), label=lbl)
+        ax.plot(*mean_prfl_pc[:2], '*', mfc="None", alpha=1, ms=12, mec='C{}'.format(i), label=lbl)
+        ax.plot(mean_prfl_pc[0], mean_prfl_pc[1], marker='${}$'.format(i + 1), alpha=1, ms=5, mec='k', mew=.4)
 
         mean_prfl_pc[:2] = mean_prfl_pc[:2] + pc_logn
         mean_prfl_pc[1] = -mean_prfl_pc[1]
@@ -406,18 +423,18 @@ def allocate_clusters_mmca(data_pc, pipeline, ax, altitudes, pc_logn, ax_profile
     mean_profiles = np.vstack(mean_profiles)
     mean_profiles_pc = np.vstack(mean_profiles_pc)
 
-    ax.plot(0, 0, '*', ms=8, mfc='None', color='k')
+    ax.plot(0, 0, 's', mfc="None", alpha=1, ms=6, mec='k', label="Neutral log")
     ax.plot(*-pc_logn, 'o', color='k', ms=5, mfc='None', label='Mean')
-    ax.legend(bbox_to_anchor=(0.05, 1.05, .9, 0.2), loc="lower left", mode="expand", borderaxespad=0, ncol=2)
+    ax.legend(bbox_to_anchor=(0.0, 1.05, 1, 0.2), loc="lower left", mode="expand", borderaxespad=0, ncol=2)
 
-    fig, ax_pcs = plt.subplots(5, 1, sharex=True)
-    plt.suptitle("PC coefficients op clusters")
-    for i, ax in enumerate(ax_pcs):
-        ax.bar(range(5), mean_profiles_pc[:, i])
-        ax.set_ylabel('PC{}'.format(i+1))
-
-    plt.figure()
-    plt.bar(range(1, 6), frequency, color=['C{}'.format(i) for i in range(5)])
+    # fig, ax_pcs = plt.subplots(5, 1, sharex=True)
+    # plt.suptitle("PC coefficients of clusters")
+    # for i, ax in enumerate(ax_pcs):
+    #     ax.bar(range(5), mean_profiles_pc[:, i])
+    #     ax.set_ylabel('PC{}'.format(i+1))
+    #
+    # plt.figure()
+    # plt.bar(range(1, 6), frequency, color=['C{}'.format(i) for i in range(5)])
 
     if ax_profiles is None:
         fig, ax = plt.subplots(1, 2, sharex=True, sharey=True, figsize=(5, 3))
@@ -435,6 +452,8 @@ def allocate_clusters_mmca(data_pc, pipeline, ax, altitudes, pc_logn, ax_profile
     ax[0].set_ylabel('Height [m]')
 
     np.save("cluster_shapes_mmca.npy", mean_profiles)
+
+    return mean_profiles, mean_profiles_pc
 
 
 def allocate_clusters_mmij(data_pc, pipeline, ax, altitudes, pc_logn, ax_profiles=None):
@@ -480,7 +499,12 @@ def allocate_clusters_mmij(data_pc, pipeline, ax, altitudes, pc_logn, ax_profile
         frequency.append(np.sum(mask)/data_pc.shape[0]*100)
         mean_prfl_pc = np.mean(data_pc[mask, :], axis=0)
         mean_profiles_pc.append(mean_prfl_pc[:5])
-        ax.plot(*mean_prfl_pc[:2], '*', ms=8, mfc='None', color='C{}'.format(i))
+        if i == 0:
+            lbl = 'Cluster mean'
+        else:
+            lbl = None
+        ax.plot(*mean_prfl_pc[:2], '*', mfc="None", alpha=1, ms=12, mec='C{}'.format(i), label=lbl)
+        ax.plot(mean_prfl_pc[0], mean_prfl_pc[1], marker='${}$'.format(i + 1), alpha=1, ms=5, mec='k', mew=.4)
 
         mean_prfl_pc[:2] = mean_prfl_pc[:2] + pc_logn
 
@@ -491,18 +515,18 @@ def allocate_clusters_mmij(data_pc, pipeline, ax, altitudes, pc_logn, ax_profile
     mean_profiles = np.vstack(mean_profiles)
     mean_profiles_pc = np.vstack(mean_profiles_pc)
 
-    ax.plot(0, 0, '*', ms=8, mfc='None', color='k')
+    ax.plot(0, 0, 's', mfc="None", alpha=1, ms=6, mec='k', label="Neutral log")
     ax.plot(*-pc_logn, 'o', color='k', ms=5, mfc='None', label='Mean')
-    ax.legend(bbox_to_anchor=(0.05, 1.05, .9, 0.2), loc="lower left", mode="expand", borderaxespad=0, ncol=2)
+    ax.legend(bbox_to_anchor=(0.0, 1.05, 1, 0.2), loc="lower left", mode="expand", borderaxespad=0, ncol=2)
 
-    fig, ax_pcs = plt.subplots(5, 1, sharex=True)
-    plt.suptitle("PC coefficients op clusters")
-    for i, ax in enumerate(ax_pcs):
-        ax.bar(range(6), mean_profiles_pc[:, i])
-        ax.set_ylabel('PC{}'.format(i + 1))
-
-    plt.figure()
-    plt.bar(range(1, 7), frequency, color=['C{}'.format(i) for i in range(6)])
+    # fig, ax_pcs = plt.subplots(5, 1, sharex=True)
+    # plt.suptitle("PC coefficients op clusters")
+    # for i, ax in enumerate(ax_pcs):
+    #     ax.bar(range(6), mean_profiles_pc[:, i])
+    #     ax.set_ylabel('PC{}'.format(i + 1))
+    #
+    # plt.figure()
+    # plt.bar(range(1, 7), frequency, color=['C{}'.format(i) for i in range(6)])
 
     if ax_profiles is None:
         fig, ax = plt.subplots(1, 2, sharex=True, sharey=True, figsize=(5, 3))
@@ -520,6 +544,8 @@ def allocate_clusters_mmij(data_pc, pipeline, ax, altitudes, pc_logn, ax_profile
     ax[0].set_ylabel('Height [m]')
 
     np.save("cluster_shapes_mmij.npy", mean_profiles)
+
+    return mean_profiles, mean_profiles_pc
 
 
 def plot_mean_cluster_profiles():
