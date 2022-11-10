@@ -15,29 +15,36 @@ xlim_pc12 = [-1.1, 1.1]
 ylim_pc12 = [-1.1, 1.1]
 x_lim_profiles = [0., 1.25]
 
-def add_inside_panel_labels(ax, y=None):
+def add_inside_panel_labels(ax, y=None, i0=0):
     import string
     ax = ax.reshape(-1)
     if y is None:
         y = [.85]*ax.shape[0]
     for i, a in enumerate(ax):
-        label = '('+string.ascii_lowercase[i]+')'
+        label = '('+string.ascii_lowercase[i+i0]+')'
         try:
             a.text(.05, y[i], label, transform=a.transAxes, fontsize='large')  #, fontweight='bold', va='top', ha='right')
         except:
             a.text(-10, -25, 0, label, fontsize='large')
 
 
-def plot_mean_and_pc_profiles(altitudes, var, get_profile, rl=.1):
+def plot_mean_and_pc_profiles(altitudes, var, get_profile, rl=.03, ax=None):
     plot_n_pcs = 2
 
-    x_label = r"$\tilde{v}$ [-]"
-    figsize = (6, 3)
+    if rl == .0002:
+        i0 = 3
+        plot_titles = False
+    else:
+        i0 = 0
+        plot_titles = True
 
-    fig, ax = plt.subplots(1, 3, sharey=True, figsize=figsize)
-    wspace = 0.1
-    layout = {'top': 0.9, 'bottom': 0.17, 'left': 0.1, 'right': 0.985, 'hspace': 0.23}
-    plt.subplots_adjust(**layout, wspace=wspace)
+    x_label = r"$\tilde{v}$ [-]"
+    if ax is None:
+        figsize = (6, 3)
+        fig, ax = plt.subplots(1, 3, sharey=True, figsize=figsize)
+        wspace = 0.1
+        layout = {'top': 0.9, 'bottom': 0.17, 'left': 0.1, 'right': 0.985, 'hspace': 0.23}
+        plt.subplots_adjust(**layout, wspace=wspace)
 
     alts = np.linspace(1e-3, altitudes[-1], 100)
     ax[0].plot(log_law_wind_profile2(alts, rl, 1, altitudes[-1], 0), alts, label='Log')
@@ -46,11 +53,14 @@ def plot_mean_and_pc_profiles(altitudes, var, get_profile, rl=.1):
     ax[0].plot(f(alts), alts, 'k:', label="Mean")
 
     ax[0].legend()
-    ax[0].set_title("Origin")
+    if plot_titles:
+        ax[0].set_title("Origin")
+        ax[0].set_xticklabels([])
     ax[0].grid(True)
     ax[0].set_ylabel("Height [m]")
     ax[0].set_xlim(x_lim_profiles)
-    ax[0].set_xlabel(x_label)
+    if not plot_titles:
+        ax[0].set_xlabel(x_label)
 
 
     # Plot PCs and PC multiplicands superimposed on the mean.
@@ -58,14 +68,17 @@ def plot_mean_and_pc_profiles(altitudes, var, get_profile, rl=.1):
         # Get profile data.
         v = get_profile(i_pc, 1, True)
         ax[i_pc+1].set_xlim(xlim_pc12)
-        ax[i_pc+1].set_title("PC{}".format(i_pc+1))
+        if plot_titles:
+            ax[i_pc+1].set_title("PC{}".format(i_pc+1))
+            ax[i_pc+1].set_xticklabels([])
 
         # Plot profiles.
         ax[i_pc+1].plot(v, altitudes)
         ax[i_pc+1].grid(True)
-        ax[i_pc+1].set_xlabel("Coefficient of PC [-]")
+        if not plot_titles:
+            ax[i_pc+1].set_xlabel("Coefficient of PC [-]")
 
-    add_inside_panel_labels(ax, [.68, .85, .85])
+    add_inside_panel_labels(ax, [.68, .85, .85], i0=i0)
 
 
 def plot_frequency_projection(x, y, labels=['PC1', 'PC2'], kde_plot=False, ax=None):
@@ -90,8 +103,9 @@ def plot_frequency_projection(x, y, labels=['PC1', 'PC2'], kde_plot=False, ax=No
         if vmax is not None and h_max > vmax:
             print("Higher density occurring than anticipated.")
 
-        cbar = plt.colorbar(im, ax=ax)
-        cbar.set_label("Occurrences [-]")
+        if not labels[1]:
+            cbar = plt.colorbar(im, ax=ax)
+            cbar.set_label("Occurrences [-]")
     else:
         import seaborn as sns
         sns.kdeplot(x=x, y=y, ax=ax)  #, bw_adjust=.6) # levels=lvls, cmap=cmap_grey, ax=ax_col[0])
@@ -129,11 +143,13 @@ def run_pca(training_data, altitudes):
     return pipeline, pcs
 
 
-def plot_pca_results(wind_data, pipeline, loc, pcs, transform_pcs=True):
+def plot_pca_results(wind_data, pipeline, loc, pcs, transform_pcs=True, ax_pcs=None, ax_2dhist=None):
     if loc == 'mmca':
         rl = .03
+        hist2d_axis_labels = ['PC1', 'PC2']
     else:
         rl = .0002
+        hist2d_axis_labels = ['PC1', '']
     print("Roughness length {}".format(rl))
     altitudes = wind_data['altitude']
     n_features = len(altitudes)
@@ -171,11 +187,11 @@ def plot_pca_results(wind_data, pipeline, loc, pcs, transform_pcs=True):
             data_pc[:, 1] = -data_pc[:, 1]
         data_pc = data_pc - pc_logn
     var = pipeline.explained_variance_
-    ax_2dhist = plot_frequency_projection(data_pc[:, 0], data_pc[:, 1])
+    plot_frequency_projection(data_pc[:, 0], data_pc[:, 1], labels=hist2d_axis_labels, ax=ax_2dhist)
 
-    obukhov_lengths_inv_mark = 1/np.array([-350, 2000, 600])  #1/np.array([-100, -350, 1e10, 350, 100])
+    obukhov_lengths_inv_mark = []  #1/np.array([-350, 2000, 600])  #1/np.array([-100, -350, 1e10, 350, 100])
     obukhov_lengths_inv = 1/np.array([-100, -350, -3e3, 1e10, 5e3, 2e3, 1e3, 700, 600, 500, 350, 200, 100])
-    if rl == .1:
+    if rl == .03:
         obukhov_lengths_inv[0] = -1
     pc1_log, pc2_log = [], []
     # pc1_log_alt, pc2_log_alt = [], []
@@ -240,7 +256,7 @@ def plot_pca_results(wind_data, pipeline, loc, pcs, transform_pcs=True):
                 profile -= mean_profile
         return profile
 
-    plot_mean_and_pc_profiles(altitudes, var, get_pc_profile, rl=rl)
+    plot_mean_and_pc_profiles(altitudes, var, get_pc_profile, rl=rl, ax=ax_pcs)
 
     use_hp_shapes = False
     if use_hp_shapes:
@@ -277,8 +293,6 @@ def plot_pca_results(wind_data, pipeline, loc, pcs, transform_pcs=True):
 
         np.save("hand_picked_shapes_{}.npy".format(loc), hand_picked_shapes)
         plot_wind_profile_shapes(hand_picked_shapes, wind_data['altitude'], rl, labels=hand_picked_shapes_pc - pc_logn[0, :2])
-
-    ax_2dhist.legend(bbox_to_anchor=(0.05, 1.05, .9, 0.2), loc="lower left", mode="expand", borderaxespad=0, ncol=2)
 
     return ax_2dhist, pc_logn, ax_prfl
 
@@ -327,7 +341,7 @@ def plot_wind_profile_shapes(profiles, altitudes, roughness_length, labels=None,
     ax.legend()
 
 
-def eval_loc(loc='mmca', transform_pcs=True, ax_profiles=None):
+def eval_loc(loc='mmca', transform_pcs=True, ax_profiles=None, ax_pcs=None, ax_proj=None):
     from read_data.dowa import read_data
     from preprocess_data import preprocess_data
     wind_data = read_data({'name': loc})
@@ -339,7 +353,7 @@ def eval_loc(loc='mmca', transform_pcs=True, ax_profiles=None):
         pcs[1, :] = -pcs[1, :]
     np.save("pcs_{}.npy".format(loc), pcs)
 
-    ax, pc_logn, ax_prfl = plot_pca_results(wind_data_red, pipeline, loc, pcs, transform_pcs)
+    ax, pc_logn, ax_prfl = plot_pca_results(wind_data_red, pipeline, loc, pcs, transform_pcs, ax_pcs, ax_proj)
 
     data_pc = pipeline.transform(wind_data_full['training_data'])
     if transform_pcs:
@@ -357,19 +371,20 @@ def eval_loc(loc='mmca', transform_pcs=True, ax_profiles=None):
         cluster_mean_profiles, cmp_pcs = allocate_clusters_mmij(data_pc, pipeline, ax, wind_data['altitude'], pc_logn[0, :2], ax_profiles)
     else:
         cluster_mean_profiles, cmp_pcs = allocate_clusters_mmca(data_pc, pipeline, ax, wind_data['altitude'], pc_logn[0, :2], ax_profiles)
-    print("Mean cluster profiles PCs:", cmp_pcs[:, :3])
-    for i in range(4):
-        lbl = 'PCs=[{:.1f}, {:.1f}, {:.2f}]'.format(*cmp_pcs[i, :3])
-        ax_prfl[0].plot(cluster_mean_profiles[i, :], wind_data['altitude'], label=lbl)
-        ax_prfl[0].legend()
-        dv_dh = (cluster_mean_profiles[i, 1:] - cluster_mean_profiles[i, :-1]) / \
-                (wind_data['altitude'][1:] - wind_data['altitude'][:-1])
-        ax_prfl[1].plot(dv_dh, wind_data['altitude'][:-1], '-.')
+    if ax_prfl is not None:
+        print("Mean cluster profiles PCs:", cmp_pcs[:, :3])
+        for i in range(4):
+            lbl = 'PCs=[{:.1f}, {:.1f}, {:.2f}]'.format(*cmp_pcs[i, :3])
+            ax_prfl[0].plot(cluster_mean_profiles[i, :], wind_data['altitude'], label=lbl)
+            ax_prfl[0].legend()
+            dv_dh = (cluster_mean_profiles[i, 1:] - cluster_mean_profiles[i, :-1]) / \
+                    (wind_data['altitude'][1:] - wind_data['altitude'][:-1])
+            ax_prfl[1].plot(dv_dh, wind_data['altitude'][:-1], '-.')
 
 
 
 def allocate_clusters_mmca(data_pc, pipeline, ax, altitudes, pc_logn, ax_profiles=None):
-    rl = .1
+    rl = .03
     from matplotlib.patches import Polygon, Path
     cluster0 = np.array([[-0.63509316, -0.13777923],
                          [0, -0.13777923],
@@ -425,7 +440,7 @@ def allocate_clusters_mmca(data_pc, pipeline, ax, altitudes, pc_logn, ax_profile
 
     ax.plot(0, 0, 's', mfc="None", alpha=1, ms=6, mec='k', label="Neutral log")
     ax.plot(*-pc_logn, 'o', color='k', ms=5, mfc='None', label='Mean')
-    ax.legend(bbox_to_anchor=(0.0, 1.05, 1, 0.2), loc="lower left", mode="expand", borderaxespad=0, ncol=2)
+    ax.legend(bbox_to_anchor=(0.5, 1.05, 1.13, 0.2), loc="lower left", mode="expand", borderaxespad=0, ncol=2)
 
     # fig, ax_pcs = plt.subplots(5, 1, sharex=True)
     # plt.suptitle("PC coefficients of clusters")
@@ -438,9 +453,9 @@ def allocate_clusters_mmca(data_pc, pipeline, ax, altitudes, pc_logn, ax_profile
 
     if ax_profiles is None:
         fig, ax = plt.subplots(1, 2, sharex=True, sharey=True, figsize=(5, 3))
+        plt.subplots_adjust(top=0.96, bottom=0.155, left=0.175, right=0.995, hspace=0.2, wspace=0.2)
     else:
         ax = ax_profiles
-    plt.subplots_adjust(top=0.96, bottom=0.155, left=0.175, right=0.995, hspace=0.2, wspace=0.2)
     plot_wind_profile_shapes(mean_profiles, altitudes, rl,
                               labels=['Cluster {}'.format(i + 1) for i in range(len(mean_profiles))],
                               colors=['C{}'.format(i) for i in range(len(mean_profiles))], ax=ax[0])
@@ -517,7 +532,7 @@ def allocate_clusters_mmij(data_pc, pipeline, ax, altitudes, pc_logn, ax_profile
 
     ax.plot(0, 0, 's', mfc="None", alpha=1, ms=6, mec='k', label="Neutral log")
     ax.plot(*-pc_logn, 'o', color='k', ms=5, mfc='None', label='Mean')
-    ax.legend(bbox_to_anchor=(0.0, 1.05, 1, 0.2), loc="lower left", mode="expand", borderaxespad=0, ncol=2)
+    # ax.legend(bbox_to_anchor=(0.0, 1.05, 1, 0.2), loc="lower left", mode="expand", borderaxespad=0, ncol=2)
 
     # fig, ax_pcs = plt.subplots(5, 1, sharex=True)
     # plt.suptitle("PC coefficients op clusters")
@@ -530,9 +545,9 @@ def allocate_clusters_mmij(data_pc, pipeline, ax, altitudes, pc_logn, ax_profile
 
     if ax_profiles is None:
         fig, ax = plt.subplots(1, 2, sharex=True, sharey=True, figsize=(5, 3))
+        plt.subplots_adjust(top=0.96, bottom=0.155, left=0.175, right=0.995, hspace=0.2, wspace=0.2)
     else:
         ax = ax_profiles
-    plt.subplots_adjust(top=0.96, bottom=0.155, left=0.175, right=0.995, hspace=0.2, wspace=0.2)
     plot_wind_profile_shapes(mean_profiles, altitudes, rl,
                              labels=['Cluster {}'.format(i + 1) for i in range(len(mean_profiles))],
                              colors=['C{}'.format(i) for i in range(len(mean_profiles))], ax=ax[0])
@@ -549,20 +564,30 @@ def allocate_clusters_mmij(data_pc, pipeline, ax, altitudes, pc_logn, ax_profile
 
 
 def plot_mean_cluster_profiles():
-    fig, ax = plt.subplots(2, 2, sharex=True, sharey=True, figsize=(5, 6))
+    ax_profiles = plt.subplots(2, 2, sharex=True, sharey=True, figsize=(5, 6))[1]
     plt.subplots_adjust(left=.165, right=.99, top=.835, bottom=.09, hspace=.1)
-    eval_loc('mmca', ax_profiles=ax[:, 0])
-    eval_loc('mmij', ax_profiles=ax[:, 1])
-    add_panel_labels(ax, [.45, .15])
-    ax[0, 0].set_title('Onshore')
-    ax[0, 1].set_title('Offshore')
-    ax[0, 1].set_ylabel('')
-    ax[0, 0].set_xlabel('')
-    ax[0, 1].set_xlabel('')
-    ax[1, 0].set_ylabel('Height [m]')
-    ax[1, 0].get_legend().remove()
-    ax[1, 1].get_legend().remove()
-    ax[0, 1].legend(bbox_to_anchor=(-1.2, 1.15, 2.2, 0.2), loc="lower left", mode="expand", borderaxespad=0, ncol=3)
+
+    ax_proj = plt.subplots(1, 2, sharex=True, sharey=True, figsize=(8, 3))[1]
+    plt.subplots_adjust(top=0.805, bottom=0.15, left=0.085, right=0.97, wspace=0.13)
+
+    fig_pcs, ax_pcs = plt.subplots(2, 3, sharey=True, figsize=(6, 5.5))
+    plt.subplots_adjust(top=0.96, bottom=0.085, left=0.105, right=0.995, hspace=0.1, wspace=0.1)
+
+    eval_loc('mmca', ax_profiles=ax_profiles[:, 0], ax_pcs=ax_pcs[0, :], ax_proj=ax_proj[0])
+    eval_loc('mmij', ax_profiles=ax_profiles[:, 1], ax_pcs=ax_pcs[1, :], ax_proj=ax_proj[1])
+
+    add_panel_labels(ax_profiles, [.45, .15])
+    ax_profiles[0, 0].set_title('Onshore')
+    ax_profiles[0, 1].set_title('Offshore')
+    ax_profiles[0, 1].set_ylabel('')
+    ax_profiles[0, 0].set_xlabel('')
+    ax_profiles[0, 1].set_xlabel('')
+    ax_profiles[1, 0].set_ylabel('Height [m]')
+    ax_profiles[1, 0].get_legend().remove()
+    ax_profiles[1, 1].get_legend().remove()
+    ax_profiles[0, 1].legend(bbox_to_anchor=(-1.2, 1.15, 2.2, 0.2), loc="lower left", mode="expand", borderaxespad=0, ncol=3)
+
+
     plt.show()
 
 
