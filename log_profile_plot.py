@@ -16,7 +16,7 @@ lbls = ['VU', 'U', 'N', 'S', 'VS']
 # plt.figure(figsize=(4, 3))
 # plt.subplots_adjust(top=0.96, bottom=0.17, left=0.155, right=0.665)
 fig, ax = plt.subplots(1, 2, sharey=True, figsize=(6.5, 3))
-plt.subplots_adjust(top=0.96, bottom=0.17, left=0.14, right=0.780, wspace=0.250)
+plt.subplots_adjust(top=0.96, bottom=0.17, left=0.14, right=0.765, wspace=0.250)
 
 rl = roughness_lengths[0]
 # print(log_law_wind_profile3(np.e**.41*rl, rl, 1, 0))  # Verify
@@ -40,11 +40,11 @@ rl = roughness_lengths[1]
 
 heights[0] = rl
 v_log = log_law_wind_profile3(heights, rl, 1, 0)
-ax[0].plot([0] + list(v_log), [0] + list(heights), '--', color='C2', label='RL=0.0002')
+ax[0].plot([0] + list(v_log), [0] + list(heights), '--', color='C2')
 # plt.plot(v_log - log_law_wind_profile3(heights, roughness_lengths[0], 1, 0), heights, label='diff')
 
 v_log = log_law_wind_profile2(heights, rl, 1, 200, 0)
-ax[1].plot([0] + list(v_log), [0] + list(heights), '--', color='C2', label='RL=0.0002')
+ax[1].plot([0] + list(v_log), [0] + list(heights), '--', color='C2', label='$z_0=0.0002$m')
 
 heights[0] = 0
 ax[1].plot(power_law(heights, 1, 200), list(heights), '--', color='C5', label=r'$\alpha$=1/7')

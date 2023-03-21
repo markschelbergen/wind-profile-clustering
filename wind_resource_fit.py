@@ -18,7 +18,7 @@ def eval_loc(loc='mmij'):
     n_samples = wind_speed.shape[0]
 
     if loc == 'mmca':
-        rl = .1
+        rl = .03
     else:
         rl = .0002
     pcs = np.load("pcs_{}.npy".format(loc))
@@ -43,9 +43,9 @@ def fit_err_cluster(x, wind_speed, profile_shape, weights=1):
     return v_err
 
 
-def assign_to_cluster(loc, weighted_fit=True, include_shapes='all'):
+def assign_to_cluster(loc, include_shapes='all', weighted_fit=True):
     if loc == 'mmca':
-        rl = .1
+        rl = .03
     else:
         rl = .0002
 
@@ -123,7 +123,7 @@ def plot_3d_results(loc='mmij'):
 
     altitudes = np.array([10., 20., 40., 60., 80., 100., 120., 140., 150., 160., 180., 200., 220., 250., 300., 500., 600.])
     if loc == 'mmca':
-        rl = .1
+        rl = .03
     else:
         rl = .0002
     pcs = np.load("pcs_{}.npy".format(loc))
@@ -260,7 +260,7 @@ def plot_3d_results(loc='mmij'):
 
 def plot_cluster_frequency(loc='mmca', clusters='', year=None, plot=False):
     if loc == 'mmca':
-        rl = .1
+        rl = .03
     else:
         rl = .0002
 
@@ -291,9 +291,9 @@ def plot_cluster_frequency(loc='mmca', clusters='', year=None, plot=False):
     cluster_labels = ['Log'] + ['Cluster {}'.format(i) for i in range(1, n_clusters)]
     
     if plot:
-        plt.figure(figsize=[7, 6])
-        plt.subplots_adjust(top=0.98, bottom=0.09, left=0.13, right=0.925, hspace=0.25, wspace=0.13)
-        ax0 = plt.subplot(411)
+        plt.figure(figsize=[7, 7])
+        plt.subplots_adjust(top=0.92, bottom=0.07, left=0.125, right=0.925, hspace=0.17, wspace=0.13)
+        ax0 = plt.subplot(421)
         ax0.set_xlim([0, 27.5])
 
         n = ax0.hist(wind_speed[:, j_200m], vw_200m_bin_edges, alpha=.2, weights=[100/wind_speed.shape[0]]*wind_speed.shape[0])[0]
@@ -302,8 +302,11 @@ def plot_cluster_frequency(loc='mmca', clusters='', year=None, plot=False):
         ax0.plot(vw_200m_bin_centers, n, color='C1', label='Aggregate of clusters')
         n = ax0.hist(x_cluster_log[:, 1], vw_200m_bin_edges, alpha=.2, weights=[100/wind_speed.shape[0]]*wind_speed.shape[0])[0]
         ax0.plot(vw_200m_bin_centers, n, color='C2', label='Log fit')
+        
         ax0.set_ylabel('Bin frequency [%]')
-        ax0.legend()
+        # ax0.legend()
+        ax0.legend(bbox_to_anchor=(0, 1.05, 1., .2), loc="lower left", mode="expand", borderaxespad=0, ncol=2)
+        ax0.xaxis.set_visible(False)
 
         ax_hist = []
         ax_power_curve = []
@@ -318,7 +321,7 @@ def plot_cluster_frequency(loc='mmca', clusters='', year=None, plot=False):
         bin_freq = np.histogram(x_cluster[mask, 1], vw_200m_bin_edges)[0]
         
         if plot:
-            ax = plt.subplot(4, 2, i + 3)
+            ax = plt.subplot(4, 2, i + 2)
             ax.xaxis.set_visible(False)
             ax.set_ylim([0, 2])
             ax.set_xlim([0, 27.5])
@@ -337,7 +340,7 @@ def plot_cluster_frequency(loc='mmca', clusters='', year=None, plot=False):
             ax.hist(x_cluster[mask, 1], vw_200m_bin_edges_above, color='C1', alpha=.5, weights=[100/wind_speed.shape[0]]*np.sum(mask))
             ax.text(0.03, 0.7, cluster_labels[i]+'\n{:.1f}%'.format(sum(mask)/x_cluster.shape[0]*100), transform=ax.transAxes)
             axt = ax.twinx()
-            if i % 2 == 0:
+            if i % 2 == 1:
                 axt.yaxis.set_visible(False)
                 ax.set_ylabel('Bin frequency [%]')
             else:
@@ -348,7 +351,7 @@ def plot_cluster_frequency(loc='mmca', clusters='', year=None, plot=False):
             ax_power_curve.append(axt)
             ax_hist.append(ax)
 
-            for a in ax_hist[4:]:
+            for a in ax_hist[5:]:
                 a.set_xlabel(r'$v_{\rm w,200m}$ [m/s]')
                 a.xaxis.set_visible(True)
         
@@ -362,7 +365,7 @@ def plot_cluster_frequency(loc='mmca', clusters='', year=None, plot=False):
         ax_power_curve[0].get_shared_y_axes().join(*ax_power_curve)
         ax_hist[0].get_shared_x_axes().join(*ax_hist)
         ax_hist.insert(0, ax0)
-        add_panel_labels(np.array(ax_hist), [.155] + [.33, .11]*3)
+        add_panel_labels(np.array(ax_hist), [.33, .11]*4)
 
         plt.figure()
         plt.bar(range(1, n_clusters+1), frequency, color=['k']+['C{}'.format(i) for i in range(n_clusters-1)], alpha=.4)
@@ -400,9 +403,20 @@ def plot_results_pc2(loc='mmij'):
 
 def aep_convergence(loc='mmij', ax=None):
     if loc == 'mmca':
-        cluster_combinations = ['0', '03', '0123', '01234', '']  #['0', '012', '03', '034', '0134', '01345', '']
+        cluster_combinations = ['0', '0123', '01234', '012346', '']  #['0', '012', '03', '034', '0134', '01345', '']
     else:
-        cluster_combinations = ['0', '0123', '01235', '012345', '']
+        cluster_combinations = ['0', '0123', '01235', '012356', '']
+
+    li_s = []
+    for i in range(4):
+        s = pd.read_csv('opt_res_{}/succeeded{}.csv'.format(loc, i))
+        li_s.append(s)
+
+    s = pd.read_csv('opt_res_{}/succeeded_att2.csv'.format(loc))
+    li_s.append(s)
+    succeeded = pd.concat(li_s, axis=0, ignore_index=True)
+    brute_force_p_2008 = succeeded['mcp'].sum() / 8784
+
     n_combs = len(cluster_combinations)
     p_avg_convergence = np.zeros((11, n_combs))
     for i, clstr_combi in enumerate(cluster_combinations):
@@ -417,7 +431,7 @@ def aep_convergence(loc='mmij', ax=None):
         ax = plt.figure().gca()
     else:
         add_legend = False
-    ax.plot(p_avg_convergence[0, :]*1e-3, 's-', label='2008-2017', ms=3)
+    ax.plot(p_avg_convergence[0, :]*8760*1e-6, 's-', label='2008-2017', ms=3)
     for j, y in enumerate(range(2008, 2018)):
         if y == 2008:
             alpha = 1
@@ -425,28 +439,28 @@ def aep_convergence(loc='mmij', ax=None):
         else:
             alpha = .5
             ls = '-'
-        ax.plot(p_avg_convergence[j+1, :]*1e-3, ls, label=y, alpha=alpha)
+        ax.plot(p_avg_convergence[j+1, :]*8760*1e-6, ls, label=y, alpha=alpha)
     ax.set_xticks(range(n_combs))
     ax.set_xticklabels(['Log', 'Set #1', 'Set #2', 'Set #3', 'All'], fontdict={'fontsize': 'small'})
 
-    loc = loc
-    li_s = []
-    for i in range(4):
-        s = pd.read_csv('opt_res_{}/succeeded{}.csv'.format(loc, i))
-        li_s.append(s)
-
-    s = pd.read_csv('opt_res_{}/succeeded_att2.csv'.format(loc))
-    li_s.append(s)
-    succeeded = pd.concat(li_s, axis=0, ignore_index=True)
-    ax.axhline(succeeded['mcp'].sum()/8784*1e-3, ls='--', color='C1')
+    ax.axhline(brute_force_p_2008*8760*1e-6, ls='--', color='C1')
     ax.set_xlabel('Wind profile shapes')
 
     if add_legend:
         ax.legend()
 
+    fig, ax = plt.subplots(2, 1)
+    steps = (p_avg_convergence[:, 1:] - p_avg_convergence[:, :-1])*8760*1e-6
+    steps_perc = (p_avg_convergence[:, 1:] - p_avg_convergence[:, :-1])/p_avg_convergence[:, 1:] * 100
+    ax[0].plot(steps[0, :], 's')
+    ax[0].plot(steps[1:, :].T)
+    ax[1].plot(steps_perc[0, :], 's')
+    ax[1].plot(steps_perc[1:, :].T)
+    ax[0].set_ylabel('Step in AEP [MWh]')
+    ax[1].set_ylabel('Step in AEP [%]')
+
     plt.figure()
-    steps = (p_avg_convergence[:, 1:] - p_avg_convergence[:, :-1])/p_avg_convergence[:, 1:] * 100
-    plt.plot(steps.T)
+    plt.plot(p_avg_convergence[1, :]/brute_force_p_2008*100)
 
 
 def plot_aep():
@@ -458,24 +472,41 @@ def plot_aep():
         aep_convergence(loc, ax[j])
 
     ax[0].legend(bbox_to_anchor=(.3, 1.13, 1.6, .2), loc="lower left", mode="expand", borderaxespad=0, ncol=4)
-    ax[0].set_ylabel('Average power [kW]')
+    ax[0].set_ylabel('Annual energy production [MWh]')
     ax[0].set_title('Onshore')
     ax[1].set_title('Offshore')
     for a in ax.reshape(-1):
         a.grid()
-        a.set_ylim([3, 7.5])
+        a.set_ylim([30, 70])
     add_panel_labels(ax, [.29, .13])
+
+def assign_to_cluster_for_all_combinations():
+    from multiprocessing import Process
+    cluster_combinations = {
+        'mmca': [],  #['0', '0123', '01234', '012346', 'all']  #
+        'mmij': ['01235', '012356'],
+    }
+    processes = []
+    for loc in ['mmca', 'mmij']:
+        for set in cluster_combinations[loc]:
+            if set != 'all':
+                set = [int(v) for v in list(set)]
+            p = Process(target=assign_to_cluster, args=(loc, set))
+            processes.append(p)
+            p.start()
+    for p in processes:
+        p.join()
 
 
 if __name__ == '__main__':
-    loc = 'mmca'
+    # assign_to_cluster_for_all_combinations()
     plot_aep()
-    # assign_to_cluster(loc, include_shapes=[0, 1, 2, 3, 4, 5])
+    # loc = 'mmij'
     # plot_cluster_frequency(loc, plot=True)
     # plot_cluster_frequency(loc, '0')
     # plot_cluster_frequency(loc, '012')
 
-    eval_loc(loc)
+    # eval_loc(loc)
     # plot_3d_results(loc)
     # plot_distr_pc12()
     # plot_results_pc1(loc)

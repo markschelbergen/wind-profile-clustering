@@ -189,8 +189,8 @@ def plot_pca_results(wind_data, pipeline, loc, pcs, transform_pcs=True, ax_pcs=N
     var = pipeline.explained_variance_
     plot_frequency_projection(data_pc[:, 0], data_pc[:, 1], labels=hist2d_axis_labels, ax=ax_2dhist)
 
-    obukhov_lengths_inv_mark = []  #1/np.array([-350, 2000, 600])  #1/np.array([-100, -350, 1e10, 350, 100])
-    obukhov_lengths_inv = 1/np.array([-100, -350, -3e3, 1e10, 5e3, 2e3, 1e3, 700, 600, 500, 350, 200, 100])
+    obukhov_lengths_inv_mark = 1/np.array([-200, -500, 500, 200])  #1/np.array([-100, -350, 1e10, 350, 100])
+    obukhov_lengths_inv = 1/np.array([-100, -200, -350, -500, -3e3, 1e10, 5e3, 2500, 1e3, 750, 500, 350, 200, 100])
     if rl == .03:
         obukhov_lengths_inv[0] = -1
     pc1_log, pc2_log = [], []
@@ -223,7 +223,8 @@ def plot_pca_results(wind_data, pipeline, loc, pcs, transform_pcs=True, ax_pcs=N
         pc1_log.append(pc_logt[0, 0])
         pc2_log.append(pc_logt[0, 1])
         if oli in obukhov_lengths_inv_mark:
-            ax_2dhist.plot(*pc_logt[0, :2], '.', color='C{}'.format(i), ms=8)
+            # ax_2dhist.plot(*pc_logt[0, :2], '.', color='C1', ms=8)
+            ax_2dhist.plot(*pc_logt[0, :2], marker='$|$', alpha=1, ms=8, mec='C1', mew=.8)
 
             ax_prfl[0].plot(v_log, altitudes, color='C{}'.format(i), label='OL={:.1e} PCs=[{:.1f}, {:.1f}, {:.2f}]'.format(ol, *pc_log[0, :3]))
             dv_dh = (v_log[1:]-v_log[:-1])/(altitudes[1:]-altitudes[:-1])
@@ -440,7 +441,7 @@ def allocate_clusters_mmca(data_pc, pipeline, ax, altitudes, pc_logn, ax_profile
 
     ax.plot(0, 0, 's', mfc="None", alpha=1, ms=6, mec='k', label="Neutral log")
     ax.plot(*-pc_logn, 'o', color='k', ms=5, mfc='None', label='Mean')
-    ax.legend(bbox_to_anchor=(0.5, 1.05, 1.13, 0.2), loc="lower left", mode="expand", borderaxespad=0, ncol=2)
+    ax.legend(bbox_to_anchor=(0.5, 1.05, 1.16, 0.2), loc="lower left", mode="expand", borderaxespad=0, ncol=2)
 
     # fig, ax_pcs = plt.subplots(5, 1, sharex=True)
     # plt.suptitle("PC coefficients of clusters")
@@ -568,7 +569,8 @@ def plot_mean_cluster_profiles():
     plt.subplots_adjust(left=.165, right=.99, top=.835, bottom=.09, hspace=.1)
 
     ax_proj = plt.subplots(1, 2, sharex=True, sharey=True, figsize=(8, 3))[1]
-    plt.subplots_adjust(top=0.805, bottom=0.15, left=0.085, right=0.97, wspace=0.13)
+    plt.subplots_adjust(top=0.805, bottom=0.15, left=0.115, right=0.97, wspace=0.16)
+    add_panel_labels(ax_proj, [.29, .15])
 
     fig_pcs, ax_pcs = plt.subplots(2, 3, sharey=True, figsize=(6, 5.5))
     plt.subplots_adjust(top=0.96, bottom=0.085, left=0.105, right=0.995, hspace=0.1, wspace=0.1)
@@ -604,6 +606,6 @@ if __name__ == '__main__':
     # training_data = wind_data_mmca['training_data']
     # pipeline = run_pca(training_data)
     # plot_pca_results(wind_data_mmca, pipeline)
-    # # plot_pca_results(wind_data_mmij, pipeline)
+    # plot_pca_results(wind_data_mmij, pipeline)
     plot_mean_cluster_profiles()
 
